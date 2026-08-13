@@ -44,6 +44,14 @@ export interface PlaceWasteCommand {
   dir: Direction;
 }
 
+/** Переключить источник между купленной партией и раскопкой кучи. */
+export interface SetInletSourceCommand {
+  type: 'SET_INLET_SOURCE';
+  cx: number;
+  cy: number;
+  fromPile: boolean;
+}
+
 /** Вывезти часть кучи за деньги. */
 export interface DisposeWasteCommand {
   type: 'DISPOSE_WASTE';
@@ -110,6 +118,7 @@ export type Command =
   | PlaceSorterCommand
   | PlaceWasteCommand
   | DisposeWasteCommand
+  | SetInletSourceCommand
   | SetFilterCommand
   | ShipOutletCommand
   | RemoveCellCommand

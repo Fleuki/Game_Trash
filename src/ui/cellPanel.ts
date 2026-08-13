@@ -3,7 +3,7 @@ import { MATERIALS, MATERIAL_IDS, type MaterialId } from '../config/materials';
 import type { CellCoord } from '../sim/types';
 
 /** Что настраиваем: у приёмника фракция одна, у остальных — список. */
-export type PanelKind = 'splitter' | 'sorter' | 'outlet';
+export type PanelKind = 'splitter' | 'sorter' | 'outlet' | 'inlet';
 
 export interface OutletStats {
   collected: Record<MaterialId, number>;
@@ -24,9 +24,13 @@ export interface CellPanel {
     stats: OutletStats | null,
     /** Точность машины при текущей скорости ленты. */
     accuracy: number,
+    /** Для источника: копает ли он кучу, и сколько в ней осталось. */
+    inlet: { fromPile: boolean; pile: number } | null,
   ): void;
   /** Обновить состав партии, пока панель открыта. */
   refresh(stats: OutletStats): void;
+  /** Обновить сведения об источнике, пока панель открыта. */
+  refreshInlet(info: { fromPile: boolean; pile: number }): void;
   readonly cell: CellCoord | null;
   close(): void;
   readonly isOpen: boolean;
@@ -42,6 +46,7 @@ export function createCellPanel(
   element: HTMLElement,
   onChange: (cell: CellCoord, filter: MaterialId[]) => void,
   onReset: (cell: CellCoord) => void,
+  onSource: (cell: CellCoord, fromPile: boolean) => void,
 ): CellPanel {
   let current: CellCoord | null = null;
   let selected = new Set<MaterialId>();
@@ -70,12 +75,19 @@ export function createCellPanel(
     if (current) onReset(current);
   });
 
+  const source = document.createElement('button');
+  source.type = 'button';
+  let digging = false;
+  source.addEventListener('click', () => {
+    if (current) onSource(current, !digging);
+  });
+
   const close = document.createElement('button');
   close.type = 'button';
   close.textContent = 'Закрыть';
   close.addEventListener('click', () => panel.close());
 
-  element.append(title, specs, rows, hint, stats, reset, close);
+  element.append(title, specs, rows, hint, stats, source, reset, close);
   element.hidden = true;
 
   const checkboxes = new Map<MaterialId, HTMLInputElement>();
@@ -118,6 +130,18 @@ export function createCellPanel(
       return current;
     },
 
+    refreshInlet(info: { fromPile: boolean; pile: number }): void {
+      if (!current || source.hidden) return;
+      digging = info.fromPile;
+      specs.textContent = info.fromPile
+        ? `копает кучу, в ней ${info.pile} ед`
+        : 'возит купленную партию';
+      hint.textContent = info.fromPile
+        ? 'Из кучи достаётся то, что в неё свалили, вместе с боем'
+        : `В куче лежит ${info.pile} ед — их можно поднять обратно в работу`;
+      source.textContent = info.fromPile ? 'Возить партию' : 'Копать кучу';
+    },
+
     refresh(next: OutletStats): void {
       if (!current || !single) return;
       const total = MATERIAL_IDS.reduce((sum, id) => sum + next.collected[id], 0) + next.broken;
@@ -143,10 +167,30 @@ export function createCellPanel(
       machine: MachineKind | null,
       outletStats: OutletStats | null,
       accuracy: number,
+      inlet: { fromPile: boolean; pile: number } | null,
     ): void {
       current = cell;
       selected = new Set(filter);
       single = kind === 'outlet';
+
+      const isInlet = kind === 'inlet';
+      rows.hidden = isInlet;
+      source.hidden = !isInlet;
+      if (isInlet && inlet) {
+        digging = inlet.fromPile;
+        title.textContent = `Источник ${cell.cx}, ${cell.cy}`;
+        specs.textContent = inlet.fromPile
+          ? `копает кучу, в ней ${inlet.pile} ед`
+          : 'возит купленную партию';
+        hint.textContent = inlet.fromPile
+          ? 'Из кучи достаётся то, что в неё свалили, вместе с боем'
+          : `В куче лежит ${inlet.pile} ед — их можно поднять обратно в работу`;
+        source.textContent = inlet.fromPile ? 'Возить партию' : 'Копать кучу';
+        stats.hidden = true;
+        reset.hidden = true;
+        element.hidden = false;
+        return;
+      }
 
       const info = machine ? MACHINES[machine] : null;
       title.textContent = single

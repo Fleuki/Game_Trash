@@ -19,6 +19,7 @@ export function createWorld(seed: number): WorldState {
       machine: null,
       cooldown: 0,
       altOut: false,
+      fromPile: false,
       collected: emptyCollected(),
       broken: 0,
     };
@@ -76,5 +77,6 @@ export function emptyDayStats(): DayStats {
     pileAtStart: 0,
     disposedUnits: 0,
     disposalCost: 0,
+    dug: 0,
   };
 }

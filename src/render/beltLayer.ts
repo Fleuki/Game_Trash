@@ -10,6 +10,7 @@ import {
   COLOR_OUTLET,
   COLOR_SPLITTER,
   COLOR_WASTE,
+  COLOR_INLET_PILE,
 } from '../config/view';
 import { DIR_STEP, cellIndex, sideDirection } from '../sim/grid';
 import type { CellPlacement, Direction, WorldState } from '../sim/types';
@@ -99,7 +100,9 @@ export function createBeltLayer(): BeltLayer {
             if (!cell || cell.kind === 'empty') continue;
             const body =
               cell.kind === 'inlet'
-                ? COLOR_INLET
+                ? cell.fromPile
+                  ? COLOR_INLET_PILE
+                  : COLOR_INLET
                 : cell.kind === 'outlet'
                   ? COLOR_OUTLET
                   : cell.kind === 'waste'

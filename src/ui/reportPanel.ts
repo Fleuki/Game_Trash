@@ -55,6 +55,7 @@ export function createReportPanel(element: HTMLElement): ReportPanel {
         ...(stats.disposedUnits > 0
           ? [row('  вывезено', `${stats.disposedUnits} ед за ${stats.disposalCost} ₽`)]
           : []),
+        ...(stats.dug > 0 ? [row('  поднято из кучи', `${stats.dug} ед`)] : []),
         '',
       ];
 

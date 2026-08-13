@@ -23,6 +23,7 @@ function isValid(command: Command): boolean {
     case 'PLACE_SPLITTER':
     case 'PLACE_SORTER':
     case 'PLACE_WASTE':
+    case 'SET_INLET_SOURCE':
     case 'SHIP_OUTLET':
     case 'REMOVE_CELL':
       return inBounds(command.cx, command.cy);

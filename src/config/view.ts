@@ -36,3 +36,4 @@ export const COLOR_OUTLET = 0x7a6a4a;
 export const COLOR_SPLITTER = 0x5f5a70;
 export const COLOR_BROKEN_GLASS = 0x4f6b5c;
 export const COLOR_WASTE = 0x5a4a3a;
+export const COLOR_INLET_PILE = 0x6b5a45;

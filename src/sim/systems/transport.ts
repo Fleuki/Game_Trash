@@ -2,7 +2,7 @@ import { ITEM_GAP, SPAWN_INTERVAL_TICKS, STEP } from '../../config/balance';
 import { cooldownTicks } from '../../config/machines';
 import { MATERIAL_IDS, type MaterialId } from '../../config/materials';
 import { neighbourIndex, sideDirection } from '../grid';
-import { addToPile } from '../pile';
+import { addToPile, takeFromPile } from '../pile';
 import { nextFloat } from '../rng';
 import { errorChance, glassBreakChance } from '../sorting';
 import { exitDirection } from '../routing';
@@ -68,19 +68,34 @@ function accepts(cell: Cell | undefined): cell is Cell {
  * Забился вход — источник встаёт вместе с линией, а не сыплет предметы друг в друга.
  */
 function spawn(world: WorldState): void {
-  const batch = world.batch;
-  // Партия кончилась — источники молчат: возить больше нечего.
-  if (!batch || batch.remaining <= 0) return;
-
   world.spawnTimer++;
   if (world.spawnTimer < SPAWN_INTERVAL_TICKS) return;
   world.spawnTimer = 0;
 
   for (const cell of world.cells) {
     if (cell.kind !== 'inlet') continue;
-    if (batch.remaining <= 0) break;
     const last = cell.items[cell.items.length - 1];
     if (last && last.t < ITEM_GAP) continue;
+
+    if (cell.fromPile) {
+      // Раскопка: что свалили вчера, то и достаём, вместе с боем.
+      const dug = takeFromPile(world);
+      if (!dug) continue;
+      world.today.dug++;
+      cell.items.push({
+        id: world.nextItemId++,
+        material: dug.material,
+        t: 0,
+        dirIn: cell.dir,
+        exitSide: false,
+        broken: dug.broken,
+      });
+      continue;
+    }
+
+    const batch = world.batch;
+    // Партия кончилась — источник молчит: возить больше нечего.
+    if (!batch || batch.remaining <= 0) continue;
     batch.remaining--;
     world.today.arrived++;
     cell.items.push({

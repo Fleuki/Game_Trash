@@ -2,6 +2,7 @@ import { GRID_HEIGHT, GRID_WIDTH } from '../config/grid';
 import { MATERIAL_IDS, type MaterialId } from '../config/materials';
 import { PILE_CELL_CAPACITY } from '../config/waste';
 import { cellIndex } from './grid';
+import { nextInt } from './rng';
 import type { WorldState } from './types';
 
 /** Сколько всего лежит в куче. */
@@ -98,4 +99,31 @@ export function disposeWaste(world: WorldState, requested: number, costPerUnit: 
   world.today.disposedUnits += disposed;
   world.today.disposalCost += cost;
   return disposed;
+}
+
+/**
+ * Достать единицу из кучи.
+ *
+ * Что попадётся — то и попадётся: куча помнит, что в неё свалили, поэтому
+ * раскопка возвращает ровно вчерашний состав, включая бой. Это и есть петля
+ * из GDD §7: провал не наказывает, а откладывается в актив.
+ */
+export function takeFromPile(world: WorldState): { material: MaterialId; broken: boolean } | null {
+  const total = pileTotal(world);
+  if (total === 0) return null;
+
+  let roll = nextInt(world, total);
+  for (const id of MATERIAL_IDS) {
+    if (roll < world.pile[id]) {
+      world.pile[id]--;
+      return { material: id, broken: false };
+    }
+    roll -= world.pile[id];
+  }
+
+  if (world.pileBroken > 0) {
+    world.pileBroken--;
+    return { material: 'glass', broken: true };
+  }
+  return null;
 }

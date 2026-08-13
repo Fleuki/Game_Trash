@@ -123,6 +123,9 @@ async function main(): Promise<void> {
     (cell) => {
       commands.push({ type: 'SHIP_OUTLET', cx: cell.cx, cy: cell.cy });
     },
+    (cell, fromPile) => {
+      commands.push({ type: 'SET_INLET_SOURCE', cx: cell.cx, cy: cell.cy, fromPile });
+    },
   );
 
   function cellAt(point: ScreenPoint): CellCoord | null {
@@ -135,7 +138,10 @@ async function main(): Promise<void> {
     if (mode !== 'hand' || !cell) return;
     const target = world.cells[cellIndex(cell.cx, cell.cy)];
     // У развилки настраивать нечего: она не различает материалы.
-    if (!target || (target.kind !== 'sorter' && target.kind !== 'outlet')) {
+    if (
+      !target ||
+      (target.kind !== 'sorter' && target.kind !== 'outlet' && target.kind !== 'inlet')
+    ) {
       cellPanel.close();
       return;
     }
@@ -153,6 +159,9 @@ async function main(): Promise<void> {
           }
         : null,
       effectiveAccuracy(world, target),
+      target.kind === 'inlet'
+        ? { fromPile: target.fromPile, pile: pileTotal(world) }
+        : null,
     );
   }
 
@@ -383,6 +392,9 @@ async function main(): Promise<void> {
     const openCell = cellPanel.cell;
     if (openCell) {
       const target = world.cells[cellIndex(openCell.cx, openCell.cy)];
+      if (target?.kind === 'inlet') {
+        cellPanel.refreshInlet({ fromPile: target.fromPile, pile: pileTotal(world) });
+      }
       if (target?.kind === 'outlet') {
         cellPanel.refresh({
           collected: target.collected,

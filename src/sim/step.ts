@@ -93,6 +93,7 @@ function applyCommand(world: WorldState, command: Command): void {
     case 'PLACE_INLET':
       cell.kind = 'inlet';
       cell.dir = command.dir;
+      cell.fromPile = false;
       world.revision++;
       break;
 
@@ -158,6 +159,12 @@ function applyCommand(world: WorldState, command: Command): void {
       // По умолчанию машина пропускает прямо всё, что умеет выбирать.
       cell.filter = defaultMachineFilter(command.machine, MATERIAL_IDS);
       cell.cooldown = 0;
+      world.revision++;
+      break;
+
+    case 'SET_INLET_SOURCE':
+      if (cell.kind !== 'inlet') return;
+      cell.fromPile = command.fromPile;
       world.revision++;
       break;
 
