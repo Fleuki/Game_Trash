@@ -1,6 +1,6 @@
 import type { Command } from '../commands/types';
 import { buildCost, crafterCost, refundFor, valueOf } from './economy';
-import { cellIndex, inBounds } from './grid';
+import { cellIndex, inBounds, isBuildable } from './grid';
 import { defaultMachineFilter } from '../config/machines';
 import { MATERIAL_IDS } from '../config/materials';
 import { emptyCollected } from './world';
@@ -9,6 +9,7 @@ import { selectOffer } from './systems/market';
 import { applyShipment, takeContract } from './systems/contracts';
 import { disposeWaste, isUnderPile } from './pile';
 import { DISPOSAL_COST_PER_UNIT } from '../config/waste';
+import { PLOT_COST, PLOT_COUNT } from '../config/plots';
 import { transport } from './systems/transport';
 import type { WorldState } from './types';
 
@@ -38,6 +39,15 @@ function applyCommand(world: WorldState, command: Command): void {
     return;
   }
 
+  if (command.type === 'BUY_PLOT') {
+    if (world.plots >= PLOT_COUNT || world.money < PLOT_COST) return;
+    world.money -= PLOT_COST;
+    world.today.spent += PLOT_COST;
+    world.plots++;
+    world.revision++;
+    return;
+  }
+
   if (command.type === 'DISPOSE_WASTE') {
     disposeWaste(world, command.units, DISPOSAL_COST_PER_UNIT);
     return;
@@ -56,6 +66,8 @@ function applyCommand(world: WorldState, command: Command): void {
       command.type === 'PLACE_CRAFTER') {
     // Под кучей не строят: она занимает место, пока её не вывезут.
     if (isUnderPile(world, cellIndex(command.cx, command.cy))) return;
+    // За границами открытых участков и на разделительных полосах — тоже.
+    if (!isBuildable(command.cx, world.plots)) return;
 
     const machine = command.type === 'PLACE_SORTER' ? command.machine : null;
     const crafter = command.type === 'PLACE_CRAFTER' ? command.crafter : null;
@@ -95,12 +107,29 @@ function applyCommand(world: WorldState, command: Command): void {
       world.revision++;
       break;
 
-    case 'PLACE_INLET':
+    case 'PLACE_INLET': {
+      // Разгрузочная площадка одна на весь завод — GDD §11. Новая не ставится
+      // рядом, а переезжает: всё приезжает в одну точку, и линии дерутся за неё.
+      const previous = world.cells.findIndex((other) => other.kind === 'inlet');
+      const moving = previous >= 0;
+      if (moving) {
+        const old = world.cells[previous];
+        if (old) {
+          old.kind = 'empty';
+          old.items.length = 0;
+          cell.fromPile = old.fromPile;
+          // Переезд не покупка: деньги за вторую разгрузку не берём.
+          world.money += buildCost('inlet', null);
+          world.today.spent -= buildCost('inlet', null);
+        }
+      } else {
+        cell.fromPile = false;
+      }
       cell.kind = 'inlet';
       cell.dir = command.dir;
-      cell.fromPile = false;
       world.revision++;
       break;
+    }
 
     case 'PLACE_CRAFTER':
       cell.kind = 'crafter';

@@ -1,4 +1,5 @@
 import { GRID_HEIGHT, GRID_WIDTH } from '../config/grid';
+import { plotOfColumn } from '../config/plots';
 import type { Direction } from './types';
 
 export const DIR_RIGHT: Direction = 0;
@@ -65,4 +66,15 @@ export function neighbourIndex(index: number, dir: Direction): number | null {
  */
 export function sideDirection(dir: Direction): Direction {
   return ((dir + 1) % 4) as Direction;
+}
+
+/**
+ * Открыт ли участок, которому принадлежит клетка.
+ *
+ * Разделительные полосы между участками не принадлежат никому: по ним не
+ * строят, и они видно разделяют площадки.
+ */
+export function isBuildable(cx: number, plots: number): boolean {
+  const plot = plotOfColumn(cx);
+  return plot !== null && plot < plots;
 }

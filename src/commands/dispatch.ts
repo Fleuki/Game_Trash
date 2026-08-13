@@ -34,6 +34,7 @@ function isValid(command: Command): boolean {
         command.filter.every((material) => MATERIAL_IDS.includes(material))
       );
     case 'ADVANCE_PHASE':
+    case 'BUY_PLOT':
       return true;
     case 'DISPOSE_WASTE':
       return Number.isFinite(command.units) && command.units > 0;

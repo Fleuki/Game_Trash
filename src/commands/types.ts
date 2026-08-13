@@ -61,6 +61,11 @@ export interface SetInletSourceCommand {
   fromPile: boolean;
 }
 
+/** Открыть следующий участок. */
+export interface BuyPlotCommand {
+  type: 'BUY_PLOT';
+}
+
 /** Вывезти часть кучи за деньги. */
 export interface DisposeWasteCommand {
   type: 'DISPOSE_WASTE';
@@ -129,6 +134,7 @@ export type Command =
   | PlaceCrafterCommand
   | DisposeWasteCommand
   | SetInletSourceCommand
+  | BuyPlotCommand
   | SetFilterCommand
   | ShipOutletCommand
   | RemoveCellCommand

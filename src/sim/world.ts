@@ -34,6 +34,7 @@ export function createWorld(seed: number): WorldState {
     market: [],
     batch: null,
     money: STARTING_MONEY,
+    plots: 1,
     pile: emptyCollected(),
     pileBroken: 0,
     today: emptyDayStats(),
@@ -80,5 +81,6 @@ export function emptyDayStats(): DayStats {
     disposedUnits: 0,
     disposalCost: 0,
     dug: 0,
+    upkeep: 0,
   };
 }

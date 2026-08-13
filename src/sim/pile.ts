@@ -1,7 +1,8 @@
 import { GRID_HEIGHT, GRID_WIDTH } from '../config/grid';
 import { MATERIAL_IDS, type MaterialId } from '../config/materials';
 import { PILE_CELL_CAPACITY } from '../config/waste';
-import { cellIndex } from './grid';
+import { cellIndex, isBuildable } from './grid';
+import { cellCoord } from './grid';
 import { nextInt } from './rng';
 import type { WorldState } from './types';
 
@@ -44,6 +45,8 @@ export function pileCells(world: WorldState): number[] {
     if (claimed.length >= needed) break;
     const cell = world.cells[index];
     if (!cell || cell.kind !== 'empty') continue;
+    // Куча лежит на своей территории и не расползается на закрытые участки.
+    if (!isBuildable(cellCoord(index).cx, world.plots)) continue;
     claimed.push(index);
   }
   return claimed;

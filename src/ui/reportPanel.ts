@@ -40,7 +40,12 @@ export function createReportPanel(element: HTMLElement): ReportPanel {
       const left = batch ? batch.remaining : 0;
       const onBelts = stats.arrived - stats.processed;
       const profit =
-        stats.earned - stats.spent + stats.refunded - stats.penalties - stats.disposalCost;
+        stats.earned -
+        stats.spent +
+        stats.refunded -
+        stats.penalties -
+        stats.disposalCost -
+        stats.upkeep;
 
       const lines: string[] = [
         `Итоги дня ${day}`,
@@ -101,6 +106,7 @@ export function createReportPanel(element: HTMLElement): ReportPanel {
         row('Потрачено на стройку', `${stats.spent} ₽`),
         row('Возвращено за снос', `${stats.refunded} ₽`),
         ...(stats.disposalCost > 0 ? [row('Вывоз кучи', `${stats.disposalCost} ₽`)] : []),
+        ...(stats.upkeep > 0 ? [row('Содержание участков', `${stats.upkeep} ₽`)] : []),
         row('Итог дня', `${profit >= 0 ? '+' : ''}${profit} ₽`),
         row('Баланс', `${money} ₽`),
         row('Репутация', `${reputation >= 0 ? '+' : ''}${reputation}`),

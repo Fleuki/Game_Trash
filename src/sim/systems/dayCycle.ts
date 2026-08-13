@@ -3,6 +3,7 @@ import { generateMarket } from './market';
 import { checkDeadlines, generateContractOffers } from './contracts';
 import { MATERIAL_IDS } from '../../config/materials';
 import { pileTotal } from '../pile';
+import { PLOT_UPKEEP } from '../../config/plots';
 import { emptyDayStats } from '../world';
 import type { WorldState } from '../types';
 
@@ -58,6 +59,12 @@ export function advancePhase(world: WorldState): void {
     world.dayTicks = 0;
     world.today = emptyDayStats();
     world.today.pileAtStart = pileTotal(world);
+    // Содержание берут за каждый участок сверх первого — GDD §11.
+    const upkeep = (world.plots - 1) * PLOT_UPKEEP;
+    if (upkeep > 0) {
+      world.money -= upkeep;
+      world.today.upkeep = upkeep;
+    }
     // Сроки проверяются уже в новом дне: контракт «к 4-му дню» живёт весь
     // четвёртый день и срывается утром пятого.
     checkDeadlines(world);

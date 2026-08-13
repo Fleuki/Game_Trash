@@ -1,6 +1,7 @@
 import { DISTRICTS } from '../config/districts';
 import { MATERIALS, MATERIAL_IDS } from '../config/materials';
 import { MAX_ACTIVE_CONTRACTS } from '../config/contracts';
+import { PLOT_COST, PLOT_COUNT, PLOT_UPKEEP } from '../config/plots';
 import type { Batch, Contract, Offer } from '../sim/types';
 
 export interface MarketPanel {
@@ -10,6 +11,7 @@ export interface MarketPanel {
     batch: Batch | null,
     offers: readonly Contract[],
     activeCount: number,
+    plots: { open: number; money: number },
     isMorning: boolean,
   ): void;
 }
@@ -52,15 +54,16 @@ export function createMarketPanel(
   element: HTMLElement,
   onPick: (index: number) => void,
   onTakeContract: (index: number) => void,
+  onBuyPlot: () => void,
 ): MarketPanel {
   let signature = '';
 
   return {
-    update(market, batch, offers, activeCount, isMorning): void {
+    update(market, batch, offers, activeCount, plots, isMorning): void {
       element.hidden = !isMorning;
       if (!isMorning) return;
 
-      const next = `${market.map((o) => `${o.district}:${o.volume}`).join('|')}#${batch?.district ?? '-'}#${offers.map((c) => c.id).join(',')}#${activeCount}`;
+      const next = `${market.map((o) => `${o.district}:${o.volume}`).join('|')}#${batch?.district ?? '-'}#${offers.map((c) => c.id).join(',')}#${activeCount}#${plots.open}#${plots.money >= PLOT_COST}`;
       if (next === signature) return;
       signature = next;
 
@@ -137,6 +140,30 @@ export function createMarketPanel(
         card.addEventListener('click', () => onTakeContract(index));
         element.appendChild(card);
       });
+
+      if (plots.open < PLOT_COUNT) {
+        const plotTitle = document.createElement('div');
+        plotTitle.className = 'panel-title board-title';
+        plotTitle.textContent = 'Участки';
+        element.appendChild(plotTitle);
+
+        const buy = document.createElement('button');
+        buy.type = 'button';
+        buy.className = 'offer';
+        buy.disabled = plots.money < PLOT_COST;
+
+        const head = document.createElement('div');
+        head.className = 'offer-head';
+        head.textContent = `Открыть участок ${plots.open + 1} — ${PLOT_COST} ₽`;
+
+        const note = document.createElement('div');
+        note.className = 'offer-note';
+        note.textContent = `Содержание ${PLOT_UPKEEP} ₽ в день. Место есть, разгрузка останется одна.`;
+
+        buy.append(head, note);
+        buy.addEventListener('click', onBuyPlot);
+        element.appendChild(buy);
+      }
     },
   };
 }

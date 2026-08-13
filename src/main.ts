@@ -106,6 +106,7 @@ async function main(): Promise<void> {
     marketElement,
     (index) => commands.push({ type: 'SELECT_OFFER', index }),
     (index) => commands.push({ type: 'TAKE_CONTRACT', index }),
+    () => commands.push({ type: 'BUY_PLOT' }),
   );
 
   const contractsPanel = createContractsPanel(contractsElement);
@@ -352,6 +353,7 @@ async function main(): Promise<void> {
       world.batch,
       world.contractOffers,
       world.contracts.filter((contract) => contract.status === 'active').length,
+      { open: world.plots, money: world.money },
       world.phase === 'morning',
     );
     contractsPanel.update(world.contracts, world.day);

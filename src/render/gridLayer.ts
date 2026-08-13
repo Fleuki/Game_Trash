@@ -1,6 +1,7 @@
 import { Container, Graphics } from 'pixi.js';
 import { GRID_HEIGHT, GRID_WIDTH, TILE_SIZE, WORLD_HEIGHT, WORLD_WIDTH } from '../config/grid';
 import type { CellCoord } from '../sim/types';
+import { PLOT_COUNT, plotColumns } from '../config/plots';
 import {
   COLOR_CELL_HOVER,
   COLOR_GRID_BORDER,
@@ -53,6 +54,14 @@ export function createGridLayer(): GridLayer {
     lines.stroke({ width, color: COLOR_GRID_LINE });
 
     lines.rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT).stroke({ width: width * 2, color: COLOR_GRID_BORDER });
+
+    // Границы участков толще: они и есть настоящие стены завода.
+    for (let plot = 0; plot < PLOT_COUNT; plot++) {
+      const { from, to } = plotColumns(plot);
+      lines
+        .rect(from * TILE_SIZE, 0, (to - from + 1) * TILE_SIZE, WORLD_HEIGHT)
+        .stroke({ width: width * 2, color: COLOR_GRID_BORDER });
+    }
     builtForZoom = zoom;
   }
 
