@@ -139,3 +139,14 @@ body {
   opacity: 0.35;
   cursor: not-allowed;
 }
+
+#panel .panel-stats {
+  margin: 8px 0;
+  padding-top: 8px;
+  white-space: pre-line;
+  border-top: 1px solid rgba(216, 212, 200, 0.15);
+}
+
+#panel button + button {
+  margin-top: 6px;
+}

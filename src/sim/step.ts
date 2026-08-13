@@ -2,7 +2,7 @@ import type { Command } from '../commands/types';
 import { cellIndex, inBounds } from './grid';
 import { defaultMachineFilter } from '../config/machines';
 import { MATERIAL_IDS } from '../config/materials';
-import { defaultFilter } from './world';
+import { defaultFilter, emptyCollected } from './world';
 import { transport } from './systems/transport';
 import type { WorldState } from './types';
 
@@ -38,9 +38,18 @@ function applyCommand(world: WorldState, command: Command): void {
     case 'PLACE_OUTLET':
       cell.kind = 'outlet';
       cell.dir = command.dir;
-      // Сток забирает предметы мгновенно, держать их в себе ему незачем.
+      // Приёмник забирает предметы мгновенно, держать их в себе ему незачем.
       cell.items.length = 0;
+      cell.collected = emptyCollected();
+      // Приёмник без назначенной фракции ничего не значит, поэтому по умолчанию
+      // он принимает ПЭТ — базовый материал.
+      cell.filter = ['pet'];
       world.revision++;
+      break;
+
+    case 'RESET_OUTLET':
+      if (cell.kind !== 'outlet') return;
+      cell.collected = emptyCollected();
       break;
 
     case 'PLACE_SPLITTER':
@@ -63,7 +72,7 @@ function applyCommand(world: WorldState, command: Command): void {
       break;
 
     case 'SET_FILTER':
-      if (cell.kind !== 'splitter' && cell.kind !== 'sorter') return;
+      if (cell.kind !== 'splitter' && cell.kind !== 'sorter' && cell.kind !== 'outlet') return;
       cell.filter = [...command.filter];
       world.revision++;
       break;
@@ -73,6 +82,7 @@ function applyCommand(world: WorldState, command: Command): void {
       cell.kind = 'empty';
       cell.machine = null;
       cell.cooldown = 0;
+      cell.collected = emptyCollected();
       // Предметы, стоявшие на снесённой клетке, исчезают вместе с ней.
       cell.items.length = 0;
       world.revision++;

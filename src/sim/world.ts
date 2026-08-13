@@ -2,13 +2,22 @@ import { BELT_SPEED_DEFAULT } from '../config/balance';
 import { GRID_HEIGHT, GRID_WIDTH } from '../config/grid';
 import { DIR_RIGHT } from './grid';
 import { MATERIAL_IDS } from '../config/materials';
+import type { MaterialId } from '../config/materials';
 import type { Cell, WorldState } from './types';
 
 /** Новый мир: пустая площадка. */
 export function createWorld(seed: number): WorldState {
   const cells: Cell[] = new Array<Cell>(GRID_WIDTH * GRID_HEIGHT);
   for (let i = 0; i < cells.length; i++) {
-    cells[i] = { kind: 'empty', dir: DIR_RIGHT, items: [], filter: [], machine: null, cooldown: 0 };
+    cells[i] = {
+      kind: 'empty',
+      dir: DIR_RIGHT,
+      items: [],
+      filter: [],
+      machine: null,
+      cooldown: 0,
+      collected: emptyCollected(),
+    };
   }
   return {
     tick: 0,
@@ -26,4 +35,9 @@ export function createWorld(seed: number): WorldState {
 /** Материалы, которые развилка пропускает прямо по умолчанию: все. */
 export function defaultFilter(): typeof MATERIAL_IDS[number][] {
   return [...MATERIAL_IDS];
+}
+
+/** Пустой счётчик принятого: нули по всем материалам. */
+export function emptyCollected(): Record<MaterialId, number> {
+  return { pet: 0, aluminium: 0, glass: 0, organic: 0 };
 }

@@ -53,6 +53,13 @@ export interface SetFilterCommand {
   filter: MaterialId[];
 }
 
+/** Высыпать накопленное приёмником и начать партию заново. */
+export interface ResetOutletCommand {
+  type: 'RESET_OUTLET';
+  cx: number;
+  cy: number;
+}
+
 export interface SetBeltSpeedCommand {
   type: 'SET_BELT_SPEED';
   /** Клеток в секунду. Границы проверяются при постановке в очередь. */
@@ -72,5 +79,6 @@ export type Command =
   | PlaceSplitterCommand
   | PlaceSorterCommand
   | SetFilterCommand
+  | ResetOutletCommand
   | RemoveCellCommand
   | SetBeltSpeedCommand;

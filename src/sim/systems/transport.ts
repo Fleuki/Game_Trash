@@ -10,8 +10,10 @@ import type { Cell, Direction, Item, WorldState } from '../types';
 interface Transfer {
   item: Item;
   from: number;
-  /** Куда переходит. null — уходит в сток и покидает мир. */
-  to: number | null;
+  /** В какую клетку переходит. */
+  to: number;
+  /** Приёмник забирает предмет из мира, а не пропускает дальше. */
+  consumed: boolean;
   /** Каким направлением вышел: у развилки оно зависит от материала. */
   exit: Direction;
 }
@@ -117,9 +119,9 @@ function move(world: WorldState): void {
       const exit = exitDirection(cell, item);
       const nextIndex = neighbourIndex(index, exit);
       const next = nextIndex === null ? undefined : world.cells[nextIndex];
-      if (!accepts(next)) continue;
+      if (nextIndex === null || !accepts(next)) continue;
 
-      transfers.push({ item, from: index, to: next.kind === 'outlet' ? null : nextIndex, exit });
+      transfers.push({ item, from: index, to: nextIndex, consumed: next.kind === 'outlet', exit });
     }
   }
 
@@ -135,13 +137,17 @@ function move(world: WorldState): void {
       from.cooldown = cooldownTicks(from.machine);
     }
 
-    if (transfer.to === null) {
+    const to = world.cells[transfer.to];
+    if (!to) continue;
+
+    // Приёмник забирает предмет и запоминает его материал: из этого потом
+    // считается чистота партии.
+    if (transfer.consumed) {
+      to.collected[transfer.item.material]++;
       world.delivered++;
       continue;
     }
 
-    const to = world.cells[transfer.to];
-    if (!to) continue;
     transfer.item.t -= 1;
     transfer.item.dirIn = transfer.exit;
 

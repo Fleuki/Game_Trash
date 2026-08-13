@@ -9,6 +9,7 @@ import {
   zoomAtScreen,
 } from './render/camera';
 import { cellIndex } from './sim/grid';
+import { purityOf } from './sim/purity';
 import type { CellCoord } from './sim/types';
 import { step } from './sim/step';
 import { createWorld } from './sim/world';
@@ -65,24 +66,41 @@ async function main(): Promise<void> {
     commands.push({ type: 'SET_BELT_SPEED', value });
   });
 
-  const cellPanel = createCellPanel(panelElement, (cell, filter) => {
-    commands.push({ type: 'SET_FILTER', cx: cell.cx, cy: cell.cy, filter });
-  });
+  const cellPanel = createCellPanel(
+    panelElement,
+    (cell, filter) => {
+      commands.push({ type: 'SET_FILTER', cx: cell.cx, cy: cell.cy, filter });
+    },
+    (cell) => {
+      commands.push({ type: 'RESET_OUTLET', cx: cell.cx, cy: cell.cy });
+    },
+  );
 
   function cellAt(point: ScreenPoint): CellCoord | null {
     const size = renderer.getViewSize();
     return cellAtScreen(camera, point.x, point.y, size.width, size.height);
   }
 
-  /** Тап по развилке или сортировщику в режиме «рука» открывает настройку. */
+  /** Тап по настраиваемой клетке в режиме «рука» открывает её панель. */
   function openPanelAt(cell: CellCoord | null): void {
     if (mode !== 'hand' || !cell) return;
     const target = world.cells[cellIndex(cell.cx, cell.cy)];
-    if (!target || (target.kind !== 'splitter' && target.kind !== 'sorter')) {
+    if (
+      !target ||
+      (target.kind !== 'splitter' && target.kind !== 'sorter' && target.kind !== 'outlet')
+    ) {
       cellPanel.close();
       return;
     }
-    cellPanel.open(cell, target.filter, target.machine);
+    cellPanel.open(
+      cell,
+      target.kind,
+      target.filter,
+      target.machine,
+      target.kind === 'outlet'
+        ? { collected: target.collected, purity: purityOf(target) }
+        : null,
+    );
   }
 
   attachPointerInput(stage, {
@@ -259,6 +277,15 @@ async function main(): Promise<void> {
       ghostAction: buildTool.action,
       alpha: accumulator / STEP,
     });
+
+    // Панель приёмника показывает живой состав партии, а не снимок на момент открытия.
+    const openCell = cellPanel.cell;
+    if (openCell) {
+      const target = world.cells[cellIndex(openCell.cx, openCell.cy)];
+      if (target?.kind === 'outlet') {
+        cellPanel.refresh({ collected: target.collected, purity: purityOf(target) });
+      }
+    }
 
     overlay.update({
       tick: world.tick,

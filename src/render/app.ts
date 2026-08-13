@@ -6,6 +6,7 @@ import { createBeltLayer } from './beltLayer';
 import type { Camera } from './camera';
 import { createGridLayer } from './gridLayer';
 import { createItemLayer } from './itemLayer';
+import { createOutletLayer } from './outletLayer';
 
 /** Всё, что нужно нарисовать кадр. Рендер читает это и ничего из этого не меняет. */
 export interface Frame {
@@ -51,8 +52,15 @@ export async function createRenderer(container: HTMLElement): Promise<Renderer> 
   const grid = createGridLayer();
   const belts = createBeltLayer();
   const items = createItemLayer();
-  // Порядок: сетка снизу, ленты, предметы на них, подсветка клетки — самой верхней.
-  viewport.addChild(grid.container, belts.container, items.container, grid.hoverContainer);
+  const outlets = createOutletLayer();
+  // Порядок: сетка снизу, ленты, предметы, полоски чистоты, подсветка — сверху.
+  viewport.addChild(
+    grid.container,
+    belts.container,
+    items.container,
+    outlets.container,
+    grid.hoverContainer,
+  );
   app.stage.addChild(viewport);
 
   return {
@@ -68,6 +76,7 @@ export async function createRenderer(container: HTMLElement): Promise<Renderer> 
       grid.setHover(frame.hover);
       belts.sync(frame.world, frame.ghost, frame.ghostAction);
       const itemCount = items.sync(frame.world, frame.alpha);
+      outlets.sync(frame.world);
 
       viewport.scale.set(camera.zoom);
       viewport.position.set(

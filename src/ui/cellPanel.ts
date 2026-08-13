@@ -2,9 +2,26 @@ import { MACHINES, type MachineKind } from '../config/machines';
 import { MATERIALS, MATERIAL_IDS, type MaterialId } from '../config/materials';
 import type { CellCoord } from '../sim/types';
 
+/** Что настраиваем: у приёмника фракция одна, у остальных — список. */
+export type PanelKind = 'splitter' | 'sorter' | 'outlet';
+
+export interface OutletStats {
+  collected: Record<MaterialId, number>;
+  purity: number;
+}
+
 export interface CellPanel {
   /** Показать настройку клетки: развилки или сортировщика. */
-  open(cell: CellCoord, filter: readonly MaterialId[], machine: MachineKind | null): void;
+  open(
+    cell: CellCoord,
+    kind: PanelKind,
+    filter: readonly MaterialId[],
+    machine: MachineKind | null,
+    stats: OutletStats | null,
+  ): void;
+  /** Обновить состав партии, пока панель открыта. */
+  refresh(stats: OutletStats): void;
+  readonly cell: CellCoord | null;
   close(): void;
   readonly isOpen: boolean;
 }
@@ -18,9 +35,11 @@ export interface CellPanel {
 export function createCellPanel(
   element: HTMLElement,
   onChange: (cell: CellCoord, filter: MaterialId[]) => void,
+  onReset: (cell: CellCoord) => void,
 ): CellPanel {
   let current: CellCoord | null = null;
   let selected = new Set<MaterialId>();
+  let single = false;
 
   const title = document.createElement('div');
   title.className = 'panel-title';
@@ -35,12 +54,22 @@ export function createCellPanel(
   hint.className = 'panel-hint';
   hint.textContent = 'Отмеченное едет прямо, остальное — вбок';
 
+  const stats = document.createElement('div');
+  stats.className = 'panel-stats';
+
+  const reset = document.createElement('button');
+  reset.type = 'button';
+  reset.textContent = 'Высыпать партию';
+  reset.addEventListener('click', () => {
+    if (current) onReset(current);
+  });
+
   const close = document.createElement('button');
   close.type = 'button';
   close.textContent = 'Закрыть';
   close.addEventListener('click', () => panel.close());
 
-  element.append(title, specs, rows, hint, close);
+  element.append(title, specs, rows, hint, stats, reset, close);
   element.hidden = true;
 
   const checkboxes = new Map<MaterialId, HTMLInputElement>();
@@ -57,8 +86,15 @@ export function createCellPanel(
     caption.textContent = MATERIALS[material].label;
 
     input.addEventListener('change', () => {
-      if (input.checked) selected.add(material);
-      else selected.delete(material);
+      // Приёмник берёт ровно одну фракцию: отметил новую — прежняя снимается.
+      if (single) {
+        selected = new Set(input.checked ? [material] : []);
+        for (const [id, box] of checkboxes) box.checked = selected.has(id);
+      } else if (input.checked) {
+        selected.add(material);
+      } else {
+        selected.delete(material);
+      }
       if (current) onChange(current, [...selected]);
     });
 
@@ -72,15 +108,51 @@ export function createCellPanel(
       return current !== null;
     },
 
-    open(cell: CellCoord, filter: readonly MaterialId[], machine: MachineKind | null): void {
+    get cell(): CellCoord | null {
+      return current;
+    },
+
+    refresh(next: OutletStats): void {
+      if (!current || !single) return;
+      const total = MATERIAL_IDS.reduce((sum, id) => sum + next.collected[id], 0);
+      stats.textContent =
+        total === 0
+          ? 'партия пуста'
+          : [
+              `принято ${total} ед`,
+              ...MATERIAL_IDS.filter((id) => next.collected[id] > 0).map(
+                (id) => `${MATERIALS[id].label}: ${next.collected[id]}`,
+              ),
+              `чистота ${(next.purity * 100).toFixed(1)}%`,
+            ].join('\n');
+    },
+
+    open(
+      cell: CellCoord,
+      kind: PanelKind,
+      filter: readonly MaterialId[],
+      machine: MachineKind | null,
+      outletStats: OutletStats | null,
+    ): void {
       current = cell;
       selected = new Set(filter);
+      single = kind === 'outlet';
 
       const info = machine ? MACHINES[machine] : null;
-      title.textContent = `${info ? info.label : 'Развилка'} ${cell.cx}, ${cell.cy}`;
-      specs.textContent = info
-        ? `${info.throughput} ед/с, точность ${Math.round(info.accuracy * 100)}%`
-        : 'разводит поток без потерь';
+      title.textContent = single
+        ? `Приёмник ${cell.cx}, ${cell.cy}`
+        : `${info ? info.label : 'Развилка'} ${cell.cx}, ${cell.cy}`;
+      specs.textContent = single
+        ? 'копит фракцию и считает её чистоту'
+        : info
+          ? `${info.throughput} ед/с, точность ${Math.round(info.accuracy * 100)}%`
+          : 'разводит поток без потерь';
+      hint.textContent = single
+        ? 'Органика пачкает вдвое сильнее прочих примесей'
+        : 'Отмеченное едет прямо, остальное — вбок';
+      stats.hidden = !single;
+      reset.hidden = !single;
+      if (outletStats) panel.refresh(outletStats);
 
       for (const [material, input] of checkboxes) {
         input.checked = selected.has(material);
