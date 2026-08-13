@@ -1,8 +1,10 @@
 import { ITEM_GAP, SPAWN_INTERVAL_TICKS, STEP } from '../../config/balance';
+import { CRAFTERS, craftCooldownTicks } from '../../config/crafters';
 import { cooldownTicks } from '../../config/machines';
 import { MATERIAL_IDS, type MaterialId } from '../../config/materials';
 import { neighbourIndex, sideDirection } from '../grid';
 import { addToPile, takeFromPile } from '../pile';
+import { unitPrice } from '../economy';
 import { nextFloat } from '../rng';
 import { errorChance, glassBreakChance } from '../sorting';
 import { exitDirection } from '../routing';
@@ -89,6 +91,7 @@ function spawn(world: WorldState): void {
         dirIn: cell.dir,
         exitSide: false,
         broken: dug.broken,
+        form: 'raw',
       });
       continue;
     }
@@ -105,6 +108,7 @@ function spawn(world: WorldState): void {
       dirIn: cell.dir,
       exitSide: false,
       broken: false,
+      form: 'raw',
     });
   }
 }
@@ -128,7 +132,7 @@ function limitFor(
 
   // Сортировщик обрабатывает предметы по одному: пока не отсчитал своё время,
   // головной предмет стоит у выхода. Отсюда берётся пропускная способность.
-  if (cell.kind === 'sorter' && cell.cooldown > 0) return 1;
+  if ((cell.kind === 'sorter' || cell.kind === 'crafter') && cell.cooldown > 0) return 1;
 
   const nextIndex = neighbourIndex(index, exitDirection(cell, item));
   const next = nextIndex === null ? undefined : world.cells[nextIndex];
@@ -155,7 +159,7 @@ function move(world: WorldState): void {
     const cell = world.cells[index];
     // Машина отсчитывает своё время даже пустая: иначе первый предмет после
     // простоя проходил бы мгновенно.
-    if (cell.kind === 'sorter' && cell.cooldown > 0) cell.cooldown--;
+    if ((cell.kind === 'sorter' || cell.kind === 'crafter') && cell.cooldown > 0) cell.cooldown--;
     if (cell.items.length === 0) continue;
     if (cell.kind === 'splitter') chooseSplitterExit(world, index, cell);
 
@@ -175,7 +179,7 @@ function move(world: WorldState): void {
       // Машина ещё не отсчитала своё время. Предел хода уже прижал предмет к
       // выходу, но выпускать его рано: без этой проверки пропускная способность
       // не работает вовсе, потому что упереться в предел и перейти — одно и то же.
-      if (cell.kind === 'sorter' && cell.cooldown > 0) continue;
+      if ((cell.kind === 'sorter' || cell.kind === 'crafter') && cell.cooldown > 0) continue;
 
       const exit = exitDirection(cell, item);
       const nextIndex = neighbourIndex(index, exit);
@@ -203,6 +207,16 @@ function move(world: WorldState): void {
     if (from.kind === 'sorter' && from.machine) {
       from.cooldown = cooldownTicks(from.machine);
     }
+    if (from.kind === 'crafter' && from.crafter) {
+      from.cooldown = craftCooldownTicks(from.crafter);
+      // Превращение происходит на выходе: что станку не по зубам — проезжает
+      // насквозь, но время его всё равно занимает.
+      const info = CRAFTERS[from.crafter];
+      const suits =
+        (info.input === null || info.input === transfer.item.material) &&
+        info.from.includes(transfer.item.form);
+      if (suits) transfer.item.form = info.output;
+    }
 
     const to = world.cells[transfer.to];
     if (!to) continue;
@@ -218,7 +232,10 @@ function move(world: WorldState): void {
       }
       // Бой считается отдельно: это уже не стекло, продать его как стекло нельзя.
       if (transfer.item.broken) to.broken++;
-      else to.collected[transfer.item.material]++;
+      else {
+        to.collected[transfer.item.material]++;
+        to.value += unitPrice(transfer.item.material, transfer.item.form);
+      }
       world.delivered++;
       world.today.processed++;
       continue;

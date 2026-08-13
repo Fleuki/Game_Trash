@@ -1,3 +1,4 @@
+import type { CraftKind } from '../config/crafters';
 import type { MachineKind } from '../config/machines';
 import type { MaterialId } from '../config/materials';
 import type { Direction } from '../sim/types';
@@ -35,6 +36,14 @@ export interface PlaceSplitterCommand {
   cx: number;
   cy: number;
   dir: Direction;
+}
+
+export interface PlaceCrafterCommand {
+  type: 'PLACE_CRAFTER';
+  cx: number;
+  cy: number;
+  dir: Direction;
+  crafter: CraftKind;
 }
 
 export interface PlaceWasteCommand {
@@ -117,6 +126,7 @@ export type Command =
   | PlaceSplitterCommand
   | PlaceSorterCommand
   | PlaceWasteCommand
+  | PlaceCrafterCommand
   | DisposeWasteCommand
   | SetInletSourceCommand
   | SetFilterCommand

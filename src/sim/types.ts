@@ -1,4 +1,5 @@
 import type { DistrictId } from '../config/districts';
+import type { CraftKind, ItemForm } from '../config/crafters';
 import type { MachineKind } from '../config/machines';
 import type { MaterialId } from '../config/materials';
 
@@ -97,7 +98,15 @@ export interface CellPlacement extends CellCoord {
 }
 
 /** Что стоит в клетке. Развилки и сортировщики добавятся в S5–S6. */
-export type CellKind = 'empty' | 'belt' | 'inlet' | 'outlet' | 'splitter' | 'sorter' | 'waste';
+export type CellKind =
+  | 'empty'
+  | 'belt'
+  | 'inlet'
+  | 'outlet'
+  | 'splitter'
+  | 'sorter'
+  | 'crafter'
+  | 'waste';
 
 export interface Cell {
   kind: CellKind;
@@ -130,6 +139,9 @@ export interface Cell {
   /** Какой это сортировщик. null — клетка не сортировщик. */
   machine: MachineKind | null;
 
+  /** Какой это крафт-станок. null — клетка не станок. */
+  crafter: CraftKind | null;
+
   /** Тиков до того, как сортировщик отпустит следующий предмет. */
   cooldown: number;
 
@@ -141,6 +153,12 @@ export interface Cell {
 
   /** Сколько боя принял приёмник. Считается отдельно: это уже не стекло. */
   broken: number;
+
+  /**
+   * Стоимость накопленной партии при полной чистоте, ₽. Копится по мере
+   * приёмки: так переработанное сырьё сохраняет свою цену, а не усредняется.
+   */
+  value: number;
 }
 
 /** Единица сырья, едущая по ленте. Живёт внутри клетки, в её массиве items. */
@@ -164,6 +182,9 @@ export interface Item {
 
   /** Стекло разбилось на быстрой ленте. Обратно уже не склеить. */
   broken: boolean;
+
+  /** Во что предмет переработан. Влияет только на цену. */
+  form: ItemForm;
 }
 
 /**

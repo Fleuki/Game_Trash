@@ -243,6 +243,9 @@ async function main(): Promise<void> {
       Digit1: 'manual',
       Digit2: 'magnet',
       Digit3: 'optical',
+      Digit4: 'press',
+      Digit5: 'composter',
+      Digit6: 'extruder',
       KeyE: 'erase',
       KeyH: 'hand',
     };

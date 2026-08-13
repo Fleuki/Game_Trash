@@ -1,5 +1,6 @@
 import { BUILD_COST, MACHINE_COST, REFUND_RATE } from '../config/economy';
 import { DISPOSAL_COST_PER_UNIT } from '../config/waste';
+import { CRAFTERS } from '../config/crafters';
 import { MACHINES } from '../config/machines';
 import type { BuildMode } from './buildTool';
 
@@ -44,6 +45,24 @@ const BUTTONS: readonly ToolbarButton[] = [
     mode: 'optical',
     label: 'Оптика',
     hint: `Оптический (3) — сортировщик, ${MACHINE_COST.optical} ₽. ${MACHINES.optical.throughput} ед/с, точность ${Math.round(MACHINES.optical.accuracy * 100)}%. Берёт любой материал.`,
+    machine: true,
+  },
+  {
+    mode: 'press',
+    label: 'Пресс',
+    hint: `Пресс (4), ${CRAFTERS.press.cost} ₽. ${CRAFTERS.press.note}. ${CRAFTERS.press.throughput} ед/с.`,
+    machine: true,
+  },
+  {
+    mode: 'composter',
+    label: 'Компостер',
+    hint: `Компостер (5), ${CRAFTERS.composter.cost} ₽. ${CRAFTERS.composter.note}. ${CRAFTERS.composter.throughput} ед/с.`,
+    machine: true,
+  },
+  {
+    mode: 'extruder',
+    label: 'Экструдер',
+    hint: `Экструдер (6), ${CRAFTERS.extruder.cost} ₽. ${CRAFTERS.extruder.note}. ${CRAFTERS.extruder.throughput} ед/с.`,
     machine: true,
   },
   {

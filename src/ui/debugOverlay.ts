@@ -45,6 +45,9 @@ const MODE_LABEL: Record<BuildMode, string> = {
   manual: 'стол',
   magnet: 'магнит',
   optical: 'оптика',
+  press: 'пресс',
+  composter: 'компостер',
+  extruder: 'экструдер',
   erase: 'снос',
   hand: 'рука',
 };

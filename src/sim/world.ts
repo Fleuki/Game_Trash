@@ -17,11 +17,13 @@ export function createWorld(seed: number): WorldState {
       items: [],
       filter: [],
       machine: null,
+      crafter: null,
       cooldown: 0,
       altOut: false,
       fromPile: false,
       collected: emptyCollected(),
       broken: 0,
+      value: 0,
     };
   }
   const world: WorldState = {

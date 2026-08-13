@@ -23,6 +23,7 @@ function isValid(command: Command): boolean {
     case 'PLACE_SPLITTER':
     case 'PLACE_SORTER':
     case 'PLACE_WASTE':
+    case 'PLACE_CRAFTER':
     case 'SET_INLET_SOURCE':
     case 'SHIP_OUTLET':
     case 'REMOVE_CELL':

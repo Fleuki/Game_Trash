@@ -1,5 +1,6 @@
 import type { Command } from '../commands/types';
 import { DIR_RIGHT, directionBetween, inBounds } from '../sim/grid';
+import { CRAFT_KINDS, type CraftKind } from '../config/crafters';
 import { MACHINE_KINDS, type MachineKind } from '../config/machines';
 import type { CellCoord, CellPlacement } from '../sim/types';
 
@@ -12,6 +13,7 @@ export type BuildMode =
   | 'waste'
   | 'splitter'
   | MachineKind
+  | CraftKind
   | 'erase'
   | 'hand';
 
@@ -138,6 +140,17 @@ export function createBuildTool(): BuildTool {
       if (action === 'erase') {
         return planned.map((cell) => ({ type: 'REMOVE_CELL', cx: cell.cx, cy: cell.cy }));
       }
+      const crafter = CRAFT_KINDS.find((kind) => kind === action);
+      if (crafter) {
+        return planned.map((cell) => ({
+          type: 'PLACE_CRAFTER',
+          cx: cell.cx,
+          cy: cell.cy,
+          dir: cell.dir,
+          crafter,
+        }));
+      }
+
       const machine = MACHINE_KINDS.find((kind) => kind === action);
       if (machine) {
         return planned.map((cell) => ({

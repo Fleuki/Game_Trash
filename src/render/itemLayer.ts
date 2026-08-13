@@ -15,6 +15,15 @@ export interface ItemLayer {
 
 const ITEM_SIZE = TILE_SIZE * 0.34;
 
+/** Осветлить цвет: переработанное сырьё должно отличаться от сырого на глаз. */
+function lighten(color: number): number {
+  const mix = (shift: number): number => {
+    const channel = (color >> shift) & 0xff;
+    return Math.min(255, Math.round(channel + (255 - channel) * 0.45)) & 0xff;
+  };
+  return (mix(16) << 16) | (mix(8) << 8) | mix(0);
+}
+
 /**
  * Где предмет находится на экране.
  *
@@ -93,7 +102,9 @@ export function createItemLayer(): ItemLayer {
           const point = itemPosition(cell, index, item, cell.items[position - 1], world, alpha);
           sprite.position.set(point.x, point.y);
           // Бой отличается на глаз: иначе игрок не поймёт, откуда взялась примесь.
-          sprite.tint = item.broken ? COLOR_BROKEN_GLASS : MATERIALS[item.material].color;
+          // Переработанное светлее сырья: видно, что через станок оно прошло.
+          const base = item.broken ? COLOR_BROKEN_GLASS : MATERIALS[item.material].color;
+          sprite.tint = item.form === 'raw' ? base : lighten(base);
           sprite.visible = true;
         }
       }

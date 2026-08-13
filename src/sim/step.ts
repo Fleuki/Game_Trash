@@ -1,5 +1,5 @@
 import type { Command } from '../commands/types';
-import { buildCost, refundFor, valueOf } from './economy';
+import { buildCost, crafterCost, refundFor, valueOf } from './economy';
 import { cellIndex, inBounds } from './grid';
 import { defaultMachineFilter } from '../config/machines';
 import { MATERIAL_IDS } from '../config/materials';
@@ -52,11 +52,13 @@ function applyCommand(world: WorldState, command: Command): void {
   // прежней стоимости: игрок не должен бояться передумать.
   if (command.type === 'PLACE_BELT' || command.type === 'PLACE_INLET' ||
       command.type === 'PLACE_OUTLET' || command.type === 'PLACE_SPLITTER' ||
-      command.type === 'PLACE_SORTER' || command.type === 'PLACE_WASTE') {
+      command.type === 'PLACE_SORTER' || command.type === 'PLACE_WASTE' ||
+      command.type === 'PLACE_CRAFTER') {
     // Под кучей не строят: она занимает место, пока её не вывезут.
     if (isUnderPile(world, cellIndex(command.cx, command.cy))) return;
 
     const machine = command.type === 'PLACE_SORTER' ? command.machine : null;
+    const crafter = command.type === 'PLACE_CRAFTER' ? command.crafter : null;
     const kind =
       command.type === 'PLACE_BELT'
         ? 'belt'
@@ -68,13 +70,16 @@ function applyCommand(world: WorldState, command: Command): void {
               ? 'splitter'
               : command.type === 'PLACE_WASTE'
                 ? 'waste'
-                : 'sorter';
+                : command.type === 'PLACE_CRAFTER'
+                  ? 'crafter'
+                  : 'sorter';
 
     // Повторная постройка того же самого ничего не меняет и денег не стоит.
-    if (cell.kind === kind && cell.machine === machine && kind !== 'belt') return;
-    if (cell.kind === kind && cell.machine === machine && cell.dir === command.dir) return;
+    const same = cell.kind === kind && cell.machine === machine && cell.crafter === crafter;
+    if (same && kind !== 'belt') return;
+    if (same && cell.dir === command.dir) return;
 
-    const cost = buildCost(kind, machine);
+    const cost = crafter ? crafterCost(crafter) : buildCost(kind, machine);
     const refund = refundFor(cell);
     if (world.money + refund < cost) return;
 
@@ -97,6 +102,14 @@ function applyCommand(world: WorldState, command: Command): void {
       world.revision++;
       break;
 
+    case 'PLACE_CRAFTER':
+      cell.kind = 'crafter';
+      cell.dir = command.dir;
+      cell.crafter = command.crafter;
+      cell.cooldown = 0;
+      world.revision++;
+      break;
+
     case 'PLACE_WASTE':
       cell.kind = 'waste';
       cell.dir = command.dir;
@@ -111,6 +124,7 @@ function applyCommand(world: WorldState, command: Command): void {
       cell.items.length = 0;
       cell.collected = emptyCollected();
       cell.broken = 0;
+      cell.value = 0;
       // Приёмник без назначенной фракции ничего не значит, поэтому по умолчанию
       // он принимает ПЭТ — базовый материал.
       cell.filter = ['pet'];
@@ -140,6 +154,7 @@ function applyCommand(world: WorldState, command: Command): void {
       });
       cell.collected = emptyCollected();
       cell.broken = 0;
+      cell.value = 0;
       break;
     }
 
@@ -181,9 +196,11 @@ function applyCommand(world: WorldState, command: Command): void {
       world.today.refunded += refund;
       cell.kind = 'empty';
       cell.machine = null;
+      cell.crafter = null;
       cell.cooldown = 0;
       cell.collected = emptyCollected();
       cell.broken = 0;
+      cell.value = 0;
       // Предметы, стоявшие на снесённой клетке, исчезают вместе с ней.
       cell.items.length = 0;
       world.revision++;
