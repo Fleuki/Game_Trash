@@ -32,11 +32,14 @@ export interface DebugStats {
   items: number;
   /** Скорость ленты, клеток в секунду. */
   beltSpeed: number;
+  /** Сколько предметов ушло через стоки. */
+  delivered: number;
 }
 
 const MODE_LABEL: Record<BuildMode, string> = {
   belt: 'лента',
   inlet: 'источник',
+  outlet: 'сток',
   erase: 'снос',
   hand: 'рука',
 };
@@ -80,6 +83,7 @@ export function createDebugOverlay(element: HTMLElement): { update(stats: DebugS
         pad('лент', String(stats.belts)),
         pad('предметов', String(stats.items)),
         pad('скорость', `${stats.beltSpeed.toFixed(1)} кл/с`),
+        pad('в стоки', String(stats.delivered)),
       ].join('\n');
     },
   };

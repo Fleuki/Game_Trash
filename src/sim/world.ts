@@ -7,13 +7,13 @@ import type { Cell, WorldState } from './types';
 export function createWorld(): WorldState {
   const cells: Cell[] = new Array<Cell>(GRID_WIDTH * GRID_HEIGHT);
   for (let i = 0; i < cells.length; i++) {
-    cells[i] = { kind: 'empty', dir: DIR_RIGHT };
+    cells[i] = { kind: 'empty', dir: DIR_RIGHT, items: [] };
   }
   return {
     tick: 0,
     cells,
-    items: [],
     nextItemId: 1,
+    delivered: 0,
     spawnTimer: 0,
     beltSpeed: BELT_SPEED_DEFAULT,
     revision: 0,

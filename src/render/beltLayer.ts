@@ -6,6 +6,7 @@ import {
   COLOR_CELL_HOVER,
   COLOR_ERASE,
   COLOR_INLET,
+  COLOR_OUTLET,
 } from '../config/view';
 import { DIR_STEP, cellIndex } from '../sim/grid';
 import type { CellPlacement, Direction, WorldState } from '../sim/types';
@@ -81,7 +82,12 @@ export function createBeltLayer(): BeltLayer {
           for (let cx = 0; cx < GRID_WIDTH; cx++) {
             const cell = world.cells[cellIndex(cx, cy)];
             if (!cell || cell.kind === 'empty') continue;
-            const body = cell.kind === 'inlet' ? COLOR_INLET : COLOR_BELT;
+            const body =
+              cell.kind === 'inlet'
+                ? COLOR_INLET
+                : cell.kind === 'outlet'
+                  ? COLOR_OUTLET
+                  : COLOR_BELT;
             drawBelt(built, cx, cy, cell.dir, body, COLOR_BELT_ARROW, 1);
           }
         }
@@ -100,7 +106,12 @@ export function createBeltLayer(): BeltLayer {
             .rect(cell.cx * TILE_SIZE, cell.cy * TILE_SIZE, TILE_SIZE, TILE_SIZE)
             .fill({ color: COLOR_ERASE, alpha: 0.45 });
         } else {
-          const body = ghostAction === 'inlet' ? COLOR_INLET : COLOR_CELL_HOVER;
+          const body =
+            ghostAction === 'inlet'
+              ? COLOR_INLET
+              : ghostAction === 'outlet'
+                ? COLOR_OUTLET
+                : COLOR_CELL_HOVER;
           drawBelt(ghostGraphics, cell.cx, cell.cy, cell.dir, body, COLOR_BELT_ARROW, 0.5);
         }
       }

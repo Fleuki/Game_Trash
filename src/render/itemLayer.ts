@@ -3,11 +3,12 @@ import { STEP } from '../config/balance';
 import { TILE_SIZE } from '../config/grid';
 import { COLOR_ITEM } from '../config/view';
 import { DIR_STEP, cellCoord } from '../sim/grid';
-import type { Item, WorldState } from '../sim/types';
+import type { Cell, Item, WorldState } from '../sim/types';
 
 export interface ItemLayer {
   container: Container;
-  sync(world: WorldState, alpha: number): void;
+  /** Рисует предметы и возвращает, сколько их сейчас на площадке. */
+  sync(world: WorldState, alpha: number): number;
 }
 
 const ITEM_SIZE = TILE_SIZE * 0.34;
@@ -20,15 +21,25 @@ const ITEM_SIZE = TILE_SIZE * 0.34;
  *
  * alpha — доля шага, прошедшая с последнего тика. Без неё предмет дёргался бы
  * ровно 60 раз в секунду вместо того, чтобы ехать плавно на любом мониторе.
+ * Стоящий в заторе предмет упирается в свой предел и никуда не уползает, потому
+ * что дальше предела экстраполяция обрезается.
  */
-function itemPosition(world: WorldState, item: Item, alpha: number): { x: number; y: number } {
-  const cell = world.cells[item.cell];
-  const { cx, cy } = cellCoord(item.cell);
+function itemPosition(
+  cell: Cell,
+  index: number,
+  item: Item,
+  ahead: Item | undefined,
+  world: WorldState,
+  alpha: number,
+): { x: number; y: number } {
+  const { cx, cy } = cellCoord(index);
   const centerX = (cx + 0.5) * TILE_SIZE;
   const centerY = (cy + 0.5) * TILE_SIZE;
 
-  const t = item.t + world.beltSpeed * STEP * alpha;
-  const dir = t < 0.5 ? item.dirIn : (cell?.dir ?? item.dirIn);
+  const predicted = item.t + world.beltSpeed * STEP * alpha;
+  const t = ahead ? Math.min(predicted, ahead.t) : predicted;
+
+  const dir = t < 0.5 ? item.dirIn : cell.dir;
   const step = DIR_STEP[dir];
   if (!step) return { x: centerX, y: centerY };
 
@@ -60,21 +71,31 @@ export function createItemLayer(): ItemLayer {
   return {
     container,
 
-    sync(world: WorldState, alpha: number): void {
-      for (let i = 0; i < world.items.length; i++) {
-        const item = world.items[i];
-        if (!item) continue;
-        const sprite = obtain(i);
-        const position = itemPosition(world, item, alpha);
-        sprite.position.set(position.x, position.y);
-        sprite.visible = true;
+    sync(world: WorldState, alpha: number): number {
+      let used = 0;
+
+      for (let index = 0; index < world.cells.length; index++) {
+        const cell = world.cells[index];
+        if (cell.items.length === 0) continue;
+
+        for (let position = 0; position < cell.items.length; position++) {
+          const item = cell.items[position];
+          if (!item) continue;
+
+          const sprite = obtain(used++);
+          const point = itemPosition(cell, index, item, cell.items[position - 1], world, alpha);
+          sprite.position.set(point.x, point.y);
+          sprite.visible = true;
+        }
       }
 
       // Лишние спрайты не удаляем, а прячем: в следующем кадре они пригодятся.
-      for (let i = world.items.length; i < pool.length; i++) {
+      for (let i = used; i < pool.length; i++) {
         const sprite = pool[i];
         if (sprite) sprite.visible = false;
       }
+
+      return used;
     },
   };
 }

@@ -13,19 +13,22 @@ export interface CellPlacement extends CellCoord {
 }
 
 /** Что стоит в клетке. Развилки и сортировщики добавятся в S5–S6. */
-export type CellKind = 'empty' | 'belt' | 'inlet';
+export type CellKind = 'empty' | 'belt' | 'inlet' | 'outlet';
 
 export interface Cell {
   kind: CellKind;
   /** Куда уезжает содержимое клетки. Для пустой клетки значения не имеет. */
   dir: Direction;
+  /**
+   * Предметы внутри клетки, от ближнего к выходу к дальнему: items[0] — головной.
+   * Порядок поддерживается при переходах и никогда не нарушается.
+   */
+  items: Item[];
 }
 
-/** Единица сырья, едущая по ленте. */
+/** Единица сырья, едущая по ленте. Живёт внутри клетки, в её массиве items. */
 export interface Item {
   id: number;
-  /** Индекс клетки, внутри которой предмет находится. */
-  cell: number;
   /** Прогресс внутри клетки, 0..1. При 1 предмет переходит в следующую. */
   t: number;
   /**
@@ -50,11 +53,11 @@ export interface WorldState {
    */
   cells: Cell[];
 
-  /** Предметы на лентах. */
-  items: Item[];
-
   /** Откуда берутся id предметов. Растёт и не переиспользуется. */
   nextItemId: number;
+
+  /** Сколько предметов ушло через стоки за всю партию. */
+  delivered: number;
 
   /** Тиков с последнего выпуска из источников. */
   spawnTimer: number;

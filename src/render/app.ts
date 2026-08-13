@@ -25,7 +25,8 @@ export interface Renderer {
   readonly backend: string;
   /** Размер холста в пикселях CSS. Ввод считает координаты относительно него. */
   getViewSize(): { width: number; height: number };
-  render(frame: Frame): void;
+  /** Рисует кадр и возвращает, сколько предметов на площадке. */
+  render(frame: Frame): number;
 }
 
 export async function createRenderer(container: HTMLElement): Promise<Renderer> {
@@ -61,12 +62,12 @@ export async function createRenderer(container: HTMLElement): Promise<Renderer> 
       return { width: app.renderer.screen.width, height: app.renderer.screen.height };
     },
 
-    render(frame: Frame): void {
+    render(frame: Frame): number {
       const { camera } = frame;
       grid.syncZoom(camera.zoom);
       grid.setHover(frame.hover);
       belts.sync(frame.world, frame.ghost, frame.ghostAction);
-      items.sync(frame.world, frame.alpha);
+      const itemCount = items.sync(frame.world, frame.alpha);
 
       viewport.scale.set(camera.zoom);
       viewport.position.set(
@@ -75,6 +76,7 @@ export async function createRenderer(container: HTMLElement): Promise<Renderer> 
       );
 
       app.renderer.render(app.stage);
+      return itemCount;
     },
   };
 }

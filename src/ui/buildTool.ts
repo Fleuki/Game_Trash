@@ -4,10 +4,10 @@ import type { CellCoord, CellPlacement } from '../sim/types';
 
 
 /** Что делает протяжка по полю. «Рука» ничего не строит и просто двигает камеру. */
-export type BuildMode = 'belt' | 'inlet' | 'erase' | 'hand';
+export type BuildMode = 'belt' | 'inlet' | 'outlet' | 'erase' | 'hand';
 
 /** Что кладёт текущая протяжка. Режим «рука» до инструмента не доходит. */
-export type BuildAction = 'belt' | 'inlet' | 'erase';
+export type BuildAction = 'belt' | 'inlet' | 'outlet' | 'erase';
 
 export interface BuildTool {
   /** Идёт ли протяжка прямо сейчас. */
@@ -129,7 +129,8 @@ export function createBuildTool(): BuildTool {
       if (action === 'erase') {
         return planned.map((cell) => ({ type: 'REMOVE_CELL', cx: cell.cx, cy: cell.cy }));
       }
-      const type = action === 'inlet' ? 'PLACE_INLET' : 'PLACE_BELT';
+      const type =
+        action === 'inlet' ? 'PLACE_INLET' : action === 'outlet' ? 'PLACE_OUTLET' : 'PLACE_BELT';
       return planned.map((cell) => ({ type, cx: cell.cx, cy: cell.cy, dir: cell.dir }));
     },
 

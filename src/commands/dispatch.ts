@@ -18,6 +18,7 @@ function isValid(command: Command): boolean {
   switch (command.type) {
     case 'PLACE_BELT':
     case 'PLACE_INLET':
+    case 'PLACE_OUTLET':
     case 'REMOVE_CELL':
       return inBounds(command.cx, command.cy);
     case 'SET_BELT_SPEED':

@@ -32,15 +32,21 @@ function applyCommand(world: WorldState, command: Command): void {
       world.revision++;
       break;
 
-    case 'REMOVE_CELL': {
+    case 'PLACE_OUTLET':
+      cell.kind = 'outlet';
+      cell.dir = command.dir;
+      // Сток забирает предметы мгновенно, держать их в себе ему незачем.
+      cell.items.length = 0;
+      world.revision++;
+      break;
+
+    case 'REMOVE_CELL':
       if (cell.kind === 'empty') return;
       cell.kind = 'empty';
       // Предметы, стоявшие на снесённой клетке, исчезают вместе с ней.
-      const removedIndex = cellIndex(command.cx, command.cy);
-      world.items = world.items.filter((item) => item.cell !== removedIndex);
+      cell.items.length = 0;
       world.revision++;
       break;
-    }
   }
 }
 

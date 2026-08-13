@@ -125,6 +125,7 @@ async function main(): Promise<void> {
     const byKey: Record<string, BuildMode> = {
       KeyB: 'belt',
       KeyI: 'inlet',
+      KeyO: 'outlet',
       KeyE: 'erase',
       KeyH: 'hand',
     };
@@ -213,7 +214,7 @@ async function main(): Promise<void> {
       beltCount = world.cells.reduce((total, cell) => total + (cell.kind === 'belt' ? 1 : 0), 0);
     }
 
-    renderer.render({
+    const itemCount = renderer.render({
       world,
       camera,
       hover,
@@ -235,8 +236,9 @@ async function main(): Promise<void> {
       zoom: camera.zoom,
       mode,
       belts: beltCount,
-      items: world.items.length,
+      items: itemCount,
       beltSpeed: world.beltSpeed,
+      delivered: world.delivered,
     });
   }
 
