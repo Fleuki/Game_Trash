@@ -1,5 +1,6 @@
 import type { Command } from '../commands/types';
 import { cellIndex, inBounds } from './grid';
+import { defaultFilter } from './world';
 import { transport } from './systems/transport';
 import type { WorldState } from './types';
 
@@ -37,6 +38,21 @@ function applyCommand(world: WorldState, command: Command): void {
       cell.dir = command.dir;
       // Сток забирает предметы мгновенно, держать их в себе ему незачем.
       cell.items.length = 0;
+      world.revision++;
+      break;
+
+    case 'PLACE_SPLITTER':
+      cell.kind = 'splitter';
+      cell.dir = command.dir;
+      // Свежая развилка пропускает всё прямо: пока её не настроили, она ведёт
+      // себя как обычная лента и ничего не делает исподтишка.
+      cell.filter = defaultFilter();
+      world.revision++;
+      break;
+
+    case 'SET_SPLITTER_FILTER':
+      if (cell.kind !== 'splitter') return;
+      cell.filter = [...command.filter];
       world.revision++;
       break;
 

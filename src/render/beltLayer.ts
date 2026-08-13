@@ -7,8 +7,9 @@ import {
   COLOR_ERASE,
   COLOR_INLET,
   COLOR_OUTLET,
+  COLOR_SPLITTER,
 } from '../config/view';
-import { DIR_STEP, cellIndex } from '../sim/grid';
+import { DIR_STEP, cellIndex, sideDirection } from '../sim/grid';
 import type { CellPlacement, Direction, WorldState } from '../sim/types';
 import type { BuildAction } from '../ui/buildTool';
 import { GRID_HEIGHT, GRID_WIDTH } from '../config/grid';
@@ -37,11 +38,23 @@ function drawBelt(
     .rect(x + inset, y + inset, TILE_SIZE - inset * 2, TILE_SIZE - inset * 2)
     .fill({ color: bodyColor, alpha });
 
+  drawArrow(graphics, cx, cy, dir, arrowColor, alpha);
+}
+
+/** Стрелка направления в центре клетки. */
+function drawArrow(
+  graphics: Graphics,
+  cx: number,
+  cy: number,
+  dir: Direction,
+  color: number,
+  alpha: number,
+): void {
   const step = DIR_STEP[dir];
   if (!step) return;
 
-  const centerX = x + TILE_SIZE / 2;
-  const centerY = y + TILE_SIZE / 2;
+  const centerX = cx * TILE_SIZE + TILE_SIZE / 2;
+  const centerY = cy * TILE_SIZE + TILE_SIZE / 2;
   const perpX = -step.dy;
   const perpY = step.dx;
 
@@ -60,7 +73,7 @@ function drawBelt(
       baseX - perpX * wing,
       baseY - perpY * wing,
     ])
-    .fill({ color: arrowColor, alpha });
+    .fill({ color, alpha });
 }
 
 export function createBeltLayer(): BeltLayer {
@@ -87,8 +100,14 @@ export function createBeltLayer(): BeltLayer {
                 ? COLOR_INLET
                 : cell.kind === 'outlet'
                   ? COLOR_OUTLET
-                  : COLOR_BELT;
+                  : cell.kind === 'splitter'
+                    ? COLOR_SPLITTER
+                    : COLOR_BELT;
             drawBelt(built, cx, cy, cell.dir, body, COLOR_BELT_ARROW, 1);
+            // У развилки два выхода, и оба должны быть видны без открытия панели.
+            if (cell.kind === 'splitter') {
+              drawArrow(built, cx, cy, sideDirection(cell.dir), COLOR_BELT_ARROW, 0.75);
+            }
           }
         }
         builtRevision = world.revision;
@@ -111,7 +130,9 @@ export function createBeltLayer(): BeltLayer {
               ? COLOR_INLET
               : ghostAction === 'outlet'
                 ? COLOR_OUTLET
-                : COLOR_CELL_HOVER;
+                : ghostAction === 'splitter'
+                  ? COLOR_SPLITTER
+                  : COLOR_CELL_HOVER;
           drawBelt(ghostGraphics, cell.cx, cell.cy, cell.dir, body, COLOR_BELT_ARROW, 0.5);
         }
       }

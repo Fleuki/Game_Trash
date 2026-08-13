@@ -1,3 +1,5 @@
+import type { MaterialId } from '../config/materials';
+
 /** Направление: куда смотрит объект. Индекс в таблицах из sim/grid.ts. */
 export type Direction = 0 | 1 | 2 | 3;
 
@@ -13,7 +15,7 @@ export interface CellPlacement extends CellCoord {
 }
 
 /** Что стоит в клетке. Развилки и сортировщики добавятся в S5–S6. */
-export type CellKind = 'empty' | 'belt' | 'inlet' | 'outlet';
+export type CellKind = 'empty' | 'belt' | 'inlet' | 'outlet' | 'splitter';
 
 export interface Cell {
   kind: CellKind;
@@ -24,11 +26,18 @@ export interface Cell {
    * Порядок поддерживается при переходах и никогда не нарушается.
    */
   items: Item[];
+
+  /**
+   * Для развилки: материалы, которые едут прямо. Всё остальное уходит вбок.
+   * У прочих клеток не используется.
+   */
+  filter: MaterialId[];
 }
 
 /** Единица сырья, едущая по ленте. Живёт внутри клетки, в её массиве items. */
 export interface Item {
   id: number;
+  material: MaterialId;
   /** Прогресс внутри клетки, 0..1. При 1 предмет переходит в следующую. */
   t: number;
   /**
@@ -64,6 +73,12 @@ export interface WorldState {
 
   /** Скорость лент в клетках в секунду. Меняется игроком через команду. */
   beltSpeed: number;
+
+  /** Сид партии. Один сид — один и тот же прогон. */
+  seed: number;
+
+  /** Текущее состояние генератора. Часть мира, иначе прогон не повторить. */
+  rngState: number;
 
   /**
    * Счётчик изменений постройки. Растёт на каждую применённую команду.

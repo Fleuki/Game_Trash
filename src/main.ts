@@ -8,6 +8,7 @@ import {
   panByScreen,
   zoomAtScreen,
 } from './render/camera';
+import { cellIndex } from './sim/grid';
 import type { CellCoord } from './sim/types';
 import { step } from './sim/step';
 import { createWorld } from './sim/world';
@@ -15,6 +16,7 @@ import { createBuildTool, type BuildAction, type BuildMode } from './ui/buildToo
 import { createDebugOverlay } from './ui/debugOverlay';
 import { attachPointerInput, type DragKind, type ScreenPoint } from './ui/pointer';
 import { createSpeedSlider } from './ui/speedSlider';
+import { createSplitterPanel } from './ui/splitterPanel';
 import { createToolbar } from './ui/toolbar';
 
 /**
@@ -27,9 +29,15 @@ async function main(): Promise<void> {
   const stage = document.querySelector<HTMLElement>('#stage');
   const overlayElement = document.querySelector<HTMLElement>('#debug-overlay');
   const toolbarElement = document.querySelector<HTMLElement>('#toolbar');
-  if (!stage || !overlayElement || !toolbarElement) throw new Error('Разметка неполная');
+  const panelElement = document.querySelector<HTMLElement>('#panel');
+  if (!stage || !overlayElement || !toolbarElement || !panelElement) {
+    throw new Error('Разметка неполная');
+  }
 
-  const world = createWorld();
+  // Сид можно задать в адресе: ?seed=123. Нужен, чтобы прогон повторялся
+  // один в один при отладке баланса. Поле ввода появится вместе с отчётом.
+  const seedParam = Number(new URLSearchParams(location.search).get('seed'));
+  const world = createWorld(Number.isFinite(seedParam) && seedParam !== 0 ? seedParam : Date.now());
   const commands = createCommandQueue();
   const renderer = await createRenderer(stage);
   const overlay = createDebugOverlay(overlayElement);
@@ -57,9 +65,24 @@ async function main(): Promise<void> {
     commands.push({ type: 'SET_BELT_SPEED', value });
   });
 
+  const splitterPanel = createSplitterPanel(panelElement, (cell, filter) => {
+    commands.push({ type: 'SET_SPLITTER_FILTER', cx: cell.cx, cy: cell.cy, filter });
+  });
+
   function cellAt(point: ScreenPoint): CellCoord | null {
     const size = renderer.getViewSize();
     return cellAtScreen(camera, point.x, point.y, size.width, size.height);
+  }
+
+  /** Тап по развилке в режиме «рука» открывает её настройку. */
+  function openSplitterAt(cell: CellCoord | null): void {
+    if (mode !== 'hand' || !cell) return;
+    const target = world.cells[cellIndex(cell.cx, cell.cy)];
+    if (!target || target.kind !== 'splitter') {
+      splitterPanel.close();
+      return;
+    }
+    splitterPanel.open(cell, target.filter);
   }
 
   attachPointerInput(stage, {
@@ -86,11 +109,17 @@ async function main(): Promise<void> {
     },
 
     onDragEnd(point, wasTap) {
-      if (panning) {
-        panning = false;
-        return;
+      const wasPanning = panning;
+      panning = false;
+
+      // Тап обрабатывается всегда: в режиме «рука» перетаскивания не было,
+      // а значит, это клик по клетке, а не движение камеры.
+      if (wasTap) {
+        lastTap = cellAt(point);
+        openSplitterAt(lastTap);
       }
-      if (wasTap) lastTap = cellAt(point);
+
+      if (wasPanning) return;
       for (const command of buildTool.commit()) commands.push(command);
     },
 
@@ -121,11 +150,15 @@ async function main(): Promise<void> {
 
   document.addEventListener('keydown', (event: KeyboardEvent) => {
     if (event.code === 'Space') spaceHeld = true;
-    if (event.code === 'Escape') buildTool.cancel();
+    if (event.code === 'Escape') {
+      buildTool.cancel();
+      splitterPanel.close();
+    }
     const byKey: Record<string, BuildMode> = {
       KeyB: 'belt',
       KeyI: 'inlet',
       KeyO: 'outlet',
+      KeyR: 'splitter',
       KeyE: 'erase',
       KeyH: 'hand',
     };
@@ -133,6 +166,7 @@ async function main(): Promise<void> {
     if (picked) {
       mode = picked;
       toolbar.setMode(mode);
+      if (mode !== 'hand') splitterPanel.close();
     }
   });
   document.addEventListener('keyup', (event: KeyboardEvent) => {

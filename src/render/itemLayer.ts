@@ -1,8 +1,9 @@
-import { Container, Graphics } from 'pixi.js';
+import { Container, Sprite, Texture } from 'pixi.js';
 import { STEP } from '../config/balance';
 import { TILE_SIZE } from '../config/grid';
-import { COLOR_ITEM } from '../config/view';
+import { MATERIALS } from '../config/materials';
 import { DIR_STEP, cellCoord } from '../sim/grid';
+import { exitDirection } from '../sim/routing';
 import type { Cell, Item, WorldState } from '../sim/types';
 
 export interface ItemLayer {
@@ -39,7 +40,9 @@ function itemPosition(
   const predicted = item.t + world.beltSpeed * STEP * alpha;
   const t = ahead ? Math.min(predicted, ahead.t) : predicted;
 
-  const dir = t < 0.5 ? item.dirIn : cell.dir;
+  // Во второй половине клетки предмет уже повёрнут туда, куда поедет:
+  // у развилки это зависит от его материала.
+  const dir = t < 0.5 ? item.dirIn : exitDirection(cell, item);
   const step = DIR_STEP[dir];
   if (!step) return { x: centerX, y: centerY };
 
@@ -55,17 +58,20 @@ function itemPosition(
  */
 export function createItemLayer(): ItemLayer {
   const container = new Container();
-  const pool: Graphics[] = [];
+  const pool: Sprite[] = [];
 
-  function obtain(index: number): Graphics {
+  function obtain(index: number): Sprite {
     const existing = pool[index];
     if (existing) return existing;
 
-    const graphics = new Graphics();
-    graphics.rect(-ITEM_SIZE / 2, -ITEM_SIZE / 2, ITEM_SIZE, ITEM_SIZE).fill(COLOR_ITEM);
-    pool.push(graphics);
-    container.addChild(graphics);
-    return graphics;
+    // Белый спрайт с подкраской: цвет предмета меняется без перерисовки формы.
+    const sprite = new Sprite(Texture.WHITE);
+    sprite.anchor.set(0.5);
+    sprite.width = ITEM_SIZE;
+    sprite.height = ITEM_SIZE;
+    pool.push(sprite);
+    container.addChild(sprite);
+    return sprite;
   }
 
   return {
@@ -85,6 +91,7 @@ export function createItemLayer(): ItemLayer {
           const sprite = obtain(used++);
           const point = itemPosition(cell, index, item, cell.items[position - 1], world, alpha);
           sprite.position.set(point.x, point.y);
+          sprite.tint = MATERIALS[item.material].color;
           sprite.visible = true;
         }
       }

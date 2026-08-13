@@ -33,3 +33,4 @@ export const COLOR_ERASE = 0xa8524a;
 export const COLOR_INLET = 0x5c7a9a;
 export const COLOR_ITEM = 0xd9cfa6;
 export const COLOR_OUTLET = 0x7a6a4a;
+export const COLOR_SPLITTER = 0x5f5a70;

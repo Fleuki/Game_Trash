@@ -1,3 +1,4 @@
+import type { MaterialId } from '../config/materials';
 import type { Direction } from '../sim/types';
 
 /**
@@ -28,6 +29,21 @@ export interface PlaceOutletCommand {
   dir: Direction;
 }
 
+export interface PlaceSplitterCommand {
+  type: 'PLACE_SPLITTER';
+  cx: number;
+  cy: number;
+  dir: Direction;
+}
+
+/** Новое правило маршрутизации: эти материалы едут прямо, остальные — вбок. */
+export interface SetSplitterFilterCommand {
+  type: 'SET_SPLITTER_FILTER';
+  cx: number;
+  cy: number;
+  filter: MaterialId[];
+}
+
 export interface SetBeltSpeedCommand {
   type: 'SET_BELT_SPEED';
   /** Клеток в секунду. Границы проверяются при постановке в очередь. */
@@ -44,5 +60,7 @@ export type Command =
   | PlaceBeltCommand
   | PlaceInletCommand
   | PlaceOutletCommand
+  | PlaceSplitterCommand
+  | SetSplitterFilterCommand
   | RemoveCellCommand
   | SetBeltSpeedCommand;

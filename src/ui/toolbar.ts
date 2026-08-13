@@ -9,6 +9,7 @@ interface ToolbarButton {
 const BUTTONS: readonly ToolbarButton[] = [
   { mode: 'belt', label: 'Лента', hint: 'B — тянуть ленту' },
   { mode: 'inlet', label: 'Источник', hint: 'I — ставить источник' },
+  { mode: 'splitter', label: 'Развилка', hint: 'R — ставить развилку' },
   { mode: 'outlet', label: 'Сток', hint: 'O — ставить сток' },
   { mode: 'erase', label: 'Снос', hint: 'E — сносить' },
   { mode: 'hand', label: 'Рука', hint: 'H — двигать поле' },

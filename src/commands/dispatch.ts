@@ -1,4 +1,5 @@
 import { BELT_SPEED_MAX, BELT_SPEED_MIN } from '../config/balance';
+import { MATERIAL_IDS } from '../config/materials';
 import { inBounds } from '../sim/grid';
 import type { Command } from './types';
 
@@ -19,8 +20,14 @@ function isValid(command: Command): boolean {
     case 'PLACE_BELT':
     case 'PLACE_INLET':
     case 'PLACE_OUTLET':
+    case 'PLACE_SPLITTER':
     case 'REMOVE_CELL':
       return inBounds(command.cx, command.cy);
+    case 'SET_SPLITTER_FILTER':
+      return (
+        inBounds(command.cx, command.cy) &&
+        command.filter.every((material) => MATERIAL_IDS.includes(material))
+      );
     case 'SET_BELT_SPEED':
       return (
         Number.isFinite(command.value) &&

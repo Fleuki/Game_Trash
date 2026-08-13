@@ -76,3 +76,54 @@ body {
   width: 140px;
   accent-color: #6f9a5c;
 }
+
+#panel {
+  position: fixed;
+  right: 12px;
+  top: 12px;
+  min-width: 200px;
+  padding: 12px 14px;
+  font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace;
+  color: #d8d4c8;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(216, 212, 200, 0.2);
+  border-radius: 4px;
+}
+
+#panel[hidden] {
+  display: none;
+}
+
+#panel .panel-title {
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+#panel .panel-rows label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 32px;
+  cursor: pointer;
+}
+
+#panel .swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+#panel .panel-hint {
+  margin: 8px 0;
+  opacity: 0.65;
+}
+
+#panel button {
+  width: 100%;
+  min-height: 36px;
+  color: #d8d4c8;
+  background: rgba(216, 212, 200, 0.1);
+  border: 1px solid rgba(216, 212, 200, 0.2);
+  border-radius: 4px;
+  cursor: pointer;
+}

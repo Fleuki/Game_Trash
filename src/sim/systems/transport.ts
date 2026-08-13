@@ -1,6 +1,9 @@
 import { ITEM_GAP, SPAWN_INTERVAL_TICKS, STEP } from '../../config/balance';
+import { SPAWN_MIX, SPAWN_MIX_TOTAL, type MaterialId } from '../../config/materials';
 import { neighbourIndex } from '../grid';
-import type { Cell, Item, WorldState } from '../types';
+import { nextFloat } from '../rng';
+import { exitDirection } from '../routing';
+import type { Cell, Direction, Item, WorldState } from '../types';
 
 /** Намерение предмета покинуть клетку. Применяется после прохода по всем клеткам. */
 interface Transfer {
@@ -8,6 +11,18 @@ interface Transfer {
   from: number;
   /** Куда переходит. null — уходит в сток и покидает мир. */
   to: number | null;
+  /** Каким направлением вышел: у развилки оно зависит от материала. */
+  exit: Direction;
+}
+
+/** Материал очередного предмета по весам состава. */
+function rollMaterial(world: WorldState): MaterialId {
+  let roll = nextFloat(world) * SPAWN_MIX_TOTAL;
+  for (const entry of SPAWN_MIX) {
+    roll -= entry.weight;
+    if (roll < 0) return entry.material;
+  }
+  return SPAWN_MIX[SPAWN_MIX.length - 1]?.material ?? 'pet';
 }
 
 /** Принимает ли клетка предметы. Пустая — не принимает, это конец ленты. */
@@ -28,7 +43,7 @@ function spawn(world: WorldState): void {
     if (cell.kind !== 'inlet') continue;
     const last = cell.items[cell.items.length - 1];
     if (last && last.t < ITEM_GAP) continue;
-    cell.items.push({ id: world.nextItemId++, t: 0, dirIn: cell.dir });
+    cell.items.push({ id: world.nextItemId++, material: rollMaterial(world), t: 0, dirIn: cell.dir });
   }
 }
 
@@ -39,11 +54,17 @@ function spawn(world: WorldState): void {
  * от того, что творится дальше по линии, а предел остальных — от впередиидущего
  * в той же клетке. Обратное давление появляется само, отдельного кода для него нет.
  */
-function limitFor(world: WorldState, index: number, cell: Cell, position: number): number {
+function limitFor(
+  world: WorldState,
+  index: number,
+  cell: Cell,
+  position: number,
+  item: Item,
+): number {
   const ahead = cell.items[position - 1];
   if (ahead) return ahead.t - ITEM_GAP;
 
-  const nextIndex = neighbourIndex(index, cell.dir);
+  const nextIndex = neighbourIndex(index, exitDirection(cell, item));
   const next = nextIndex === null ? undefined : world.cells[nextIndex];
 
   // Конец ленты: стена. Предмет упирается в край клетки и стоит.
@@ -69,16 +90,17 @@ function move(world: WorldState): void {
       const item = cell.items[position];
       if (!item) continue;
 
-      item.t = Math.min(item.t + distance, limitFor(world, index, cell, position));
+      item.t = Math.min(item.t + distance, limitFor(world, index, cell, position, item));
 
       // Уйти из клетки может только головной: остальных держит зазор.
       if (position !== 0 || item.t < 1) continue;
 
-      const nextIndex = neighbourIndex(index, cell.dir);
+      const exit = exitDirection(cell, item);
+      const nextIndex = neighbourIndex(index, exit);
       const next = nextIndex === null ? undefined : world.cells[nextIndex];
       if (!accepts(next)) continue;
 
-      transfers.push({ item, from: index, to: next.kind === 'outlet' ? null : nextIndex });
+      transfers.push({ item, from: index, to: next.kind === 'outlet' ? null : nextIndex, exit });
     }
   }
 
@@ -97,7 +119,7 @@ function move(world: WorldState): void {
     const to = world.cells[transfer.to];
     if (!to) continue;
     transfer.item.t -= 1;
-    transfer.item.dirIn = from.dir;
+    transfer.item.dirIn = transfer.exit;
     // В конец: предмет въезжает сзади и оказывается дальше всех от выхода.
     to.items.push(transfer.item);
   }

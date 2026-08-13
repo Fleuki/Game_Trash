@@ -56,3 +56,13 @@ export function neighbourIndex(index: number, dir: Direction): number | null {
   if (!inBounds(nx, ny)) return null;
   return cellIndex(nx, ny);
 }
+
+/**
+ * Боковой выход развилки — поворот направо от основного направления.
+ *
+ * Фиксирован намеренно: любую пару перпендикулярных выходов можно получить,
+ * развернув саму развилку и вывернув список материалов наизнанку.
+ */
+export function sideDirection(dir: Direction): Direction {
+  return ((dir + 1) % 4) as Direction;
+}
