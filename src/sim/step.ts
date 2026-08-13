@@ -7,6 +7,8 @@ import { emptyCollected } from './world';
 import { advancePhase, dayCycle } from './systems/dayCycle';
 import { selectOffer } from './systems/market';
 import { applyShipment, takeContract } from './systems/contracts';
+import { disposeWaste, isUnderPile } from './pile';
+import { DISPOSAL_COST_PER_UNIT } from '../config/waste';
 import { transport } from './systems/transport';
 import type { WorldState } from './types';
 
@@ -36,6 +38,11 @@ function applyCommand(world: WorldState, command: Command): void {
     return;
   }
 
+  if (command.type === 'DISPOSE_WASTE') {
+    disposeWaste(world, command.units, DISPOSAL_COST_PER_UNIT);
+    return;
+  }
+
   if (!inBounds(command.cx, command.cy)) return;
 
   const cell = world.cells[cellIndex(command.cx, command.cy)];
@@ -45,7 +52,10 @@ function applyCommand(world: WorldState, command: Command): void {
   // прежней стоимости: игрок не должен бояться передумать.
   if (command.type === 'PLACE_BELT' || command.type === 'PLACE_INLET' ||
       command.type === 'PLACE_OUTLET' || command.type === 'PLACE_SPLITTER' ||
-      command.type === 'PLACE_SORTER') {
+      command.type === 'PLACE_SORTER' || command.type === 'PLACE_WASTE') {
+    // Под кучей не строят: она занимает место, пока её не вывезут.
+    if (isUnderPile(world, cellIndex(command.cx, command.cy))) return;
+
     const machine = command.type === 'PLACE_SORTER' ? command.machine : null;
     const kind =
       command.type === 'PLACE_BELT'
@@ -56,7 +66,9 @@ function applyCommand(world: WorldState, command: Command): void {
             ? 'outlet'
             : command.type === 'PLACE_SPLITTER'
               ? 'splitter'
-              : 'sorter';
+              : command.type === 'PLACE_WASTE'
+                ? 'waste'
+                : 'sorter';
 
     // Повторная постройка того же самого ничего не меняет и денег не стоит.
     if (cell.kind === kind && cell.machine === machine && kind !== 'belt') return;
@@ -81,6 +93,13 @@ function applyCommand(world: WorldState, command: Command): void {
     case 'PLACE_INLET':
       cell.kind = 'inlet';
       cell.dir = command.dir;
+      world.revision++;
+      break;
+
+    case 'PLACE_WASTE':
+      cell.kind = 'waste';
+      cell.dir = command.dir;
+      cell.items.length = 0;
       world.revision++;
       break;
 

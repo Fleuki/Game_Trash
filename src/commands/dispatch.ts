@@ -22,6 +22,7 @@ function isValid(command: Command): boolean {
     case 'PLACE_OUTLET':
     case 'PLACE_SPLITTER':
     case 'PLACE_SORTER':
+    case 'PLACE_WASTE':
     case 'SHIP_OUTLET':
     case 'REMOVE_CELL':
       return inBounds(command.cx, command.cy);
@@ -32,6 +33,8 @@ function isValid(command: Command): boolean {
       );
     case 'ADVANCE_PHASE':
       return true;
+    case 'DISPOSE_WASTE':
+      return Number.isFinite(command.units) && command.units > 0;
     case 'TAKE_CONTRACT':
     case 'SELECT_OFFER':
       return Number.isInteger(command.index) && command.index >= 0;

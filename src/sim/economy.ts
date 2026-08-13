@@ -54,6 +54,7 @@ export function buildCost(kind: CellKind, machine: MachineKind | null): number {
   if (kind === 'splitter') return BUILD_COST.splitter;
   if (kind === 'inlet') return BUILD_COST.inlet;
   if (kind === 'outlet') return BUILD_COST.outlet;
+  if (kind === 'waste') return BUILD_COST.waste;
   return 0;
 }
 

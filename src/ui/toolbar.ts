@@ -1,4 +1,5 @@
 import { BUILD_COST, MACHINE_COST, REFUND_RATE } from '../config/economy';
+import { DISPOSAL_COST_PER_UNIT } from '../config/waste';
 import { MACHINES } from '../config/machines';
 import type { BuildMode } from './buildTool';
 
@@ -49,6 +50,11 @@ const BUTTONS: readonly ToolbarButton[] = [
     mode: 'outlet',
     label: 'Приёмник',
     hint: `Приёмник (O), ${BUILD_COST.outlet} ₽. Копит фракцию, считает чистоту и отгружает за деньги. Настроить — «Рука» и тап.`,
+  },
+  {
+    mode: 'waste',
+    label: 'Сброс',
+    hint: `Сброс (W), ${BUILD_COST.waste} ₽. Всё, что сюда приедет, уходит в кучу и остаётся там. Вывоз — ${DISPOSAL_COST_PER_UNIT} ₽ за единицу.`,
   },
   {
     mode: 'erase',

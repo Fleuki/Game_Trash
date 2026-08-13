@@ -31,6 +31,8 @@ export function createWorld(seed: number): WorldState {
     market: [],
     batch: null,
     money: STARTING_MONEY,
+    pile: emptyCollected(),
+    pileBroken: 0,
     today: emptyDayStats(),
     contracts: [],
     contractOffers: [],
@@ -49,6 +51,7 @@ export function createWorld(seed: number): WorldState {
   // Первое утро уже с рынком: пустая утренняя фаза не значила бы ничего.
   generateMarket(world);
   generateContractOffers(world);
+  world.today.pileAtStart = 0;
   return world;
 }
 
@@ -70,5 +73,8 @@ export function emptyDayStats(): DayStats {
     penalties: 0,
     contractsDone: 0,
     contractsFailed: 0,
+    pileAtStart: 0,
+    disposedUnits: 0,
+    disposalCost: 0,
   };
 }

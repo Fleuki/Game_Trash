@@ -9,6 +9,7 @@ import {
   COLOR_INLET,
   COLOR_OUTLET,
   COLOR_SPLITTER,
+  COLOR_WASTE,
 } from '../config/view';
 import { DIR_STEP, cellIndex, sideDirection } from '../sim/grid';
 import type { CellPlacement, Direction, WorldState } from '../sim/types';
@@ -101,11 +102,13 @@ export function createBeltLayer(): BeltLayer {
                 ? COLOR_INLET
                 : cell.kind === 'outlet'
                   ? COLOR_OUTLET
-                  : cell.kind === 'splitter'
+                  : cell.kind === 'waste'
+                    ? COLOR_WASTE
+                    : cell.kind === 'splitter'
                     ? COLOR_SPLITTER
-                    : cell.kind === 'sorter' && cell.machine
-                      ? MACHINES[cell.machine].color
-                      : COLOR_BELT;
+                      : cell.kind === 'sorter' && cell.machine
+                        ? MACHINES[cell.machine].color
+                        : COLOR_BELT;
             drawBelt(built, cx, cy, cell.dir, body, COLOR_BELT_ARROW, 1);
             // У развилки два выхода, и оба должны быть видны без открытия панели.
             if (cell.kind === 'splitter' || cell.kind === 'sorter') {
@@ -135,7 +138,9 @@ export function createBeltLayer(): BeltLayer {
               ? COLOR_INLET
               : ghostAction === 'outlet'
                 ? COLOR_OUTLET
-                : ghostAction === 'splitter'
+                : ghostAction === 'waste'
+                  ? COLOR_WASTE
+                  : ghostAction === 'splitter'
                   ? COLOR_SPLITTER
                   : ghostAction === 'manual' || ghostAction === 'magnet' || ghostAction === 'optical'
                     ? MACHINES[ghostAction].color

@@ -7,6 +7,7 @@ import type { Camera } from './camera';
 import { createGridLayer } from './gridLayer';
 import { createItemLayer } from './itemLayer';
 import { createOutletLayer } from './outletLayer';
+import { createPileLayer } from './pileLayer';
 
 /** Всё, что нужно нарисовать кадр. Рендер читает это и ничего из этого не меняет. */
 export interface Frame {
@@ -55,9 +56,11 @@ export async function createRenderer(container: HTMLElement): Promise<Renderer> 
   const belts = createBeltLayer();
   const items = createItemLayer();
   const outlets = createOutletLayer();
-  // Порядок: сетка снизу, ленты, предметы, полоски чистоты, подсветка — сверху.
+  const pile = createPileLayer();
+  // Порядок: сетка, куча, ленты, предметы, полоски чистоты, подсветка сверху.
   viewport.addChild(
     grid.container,
+    pile.container,
     belts.container,
     items.container,
     outlets.container,
@@ -79,6 +82,7 @@ export async function createRenderer(container: HTMLElement): Promise<Renderer> 
       belts.sync(frame.world, frame.ghost, frame.ghostAction);
       const itemCount = items.sync(frame.world, frame.alpha * frame.timeScale);
       outlets.sync(frame.world);
+      pile.sync(frame.world);
 
       viewport.scale.set(camera.zoom);
       viewport.position.set(

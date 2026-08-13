@@ -1,6 +1,8 @@
 import { DAY_LENGTH_TICKS } from '../../config/balance';
 import { generateMarket } from './market';
 import { checkDeadlines, generateContractOffers } from './contracts';
+import { MATERIAL_IDS } from '../../config/materials';
+import { pileTotal } from '../pile';
 import { emptyDayStats } from '../world';
 import type { WorldState } from '../types';
 
@@ -15,10 +17,24 @@ export function dayCycle(world: WorldState): void {
   if (world.phase !== 'day') return;
 
   world.dayTicks++;
-  if (world.dayTicks >= DAY_LENGTH_TICKS) {
-    world.dayTicks = DAY_LENGTH_TICKS;
-    world.phase = 'evening';
+  if (world.dayTicks < DAY_LENGTH_TICKS) return;
+
+  world.dayTicks = DAY_LENGTH_TICKS;
+  world.phase = 'evening';
+
+  // Что не успели принять — не исчезает: партия куплена, и остаток ложится
+  // в кучу. GDD §7: поток входит всегда, готов ты или нет.
+  const batch = world.batch;
+  if (!batch || batch.remaining <= 0) return;
+
+  let left = batch.remaining;
+  for (const id of MATERIAL_IDS) {
+    const share = Math.min(left, Math.round(batch.remaining * batch.composition[id]));
+    world.pile[id] += share;
+    left -= share;
   }
+  if (left > 0) world.pile.pet += left;
+  batch.remaining = 0;
 }
 
 /** Перейти к следующей фазе по воле игрока. День сам не начинается и не повторяется. */
@@ -41,6 +57,7 @@ export function advancePhase(world: WorldState): void {
     world.day++;
     world.dayTicks = 0;
     world.today = emptyDayStats();
+    world.today.pileAtStart = pileTotal(world);
     // Сроки проверяются уже в новом дне: контракт «к 4-му дню» живёт весь
     // четвёртый день и срывается утром пятого.
     checkDeadlines(world);

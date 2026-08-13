@@ -73,6 +73,11 @@ export interface DayStats {
   penalties: number;
   contractsDone: number;
   contractsFailed: number;
+  /** Размер кучи на начало дня: в отчёте показывается дельта. */
+  pileAtStart: number;
+  /** Сколько единиц вывезли и за сколько. */
+  disposedUnits: number;
+  disposalCost: number;
 }
 
 /** Направление: куда смотрит объект. Индекс в таблицах из sim/grid.ts. */
@@ -90,7 +95,7 @@ export interface CellPlacement extends CellCoord {
 }
 
 /** Что стоит в клетке. Развилки и сортировщики добавятся в S5–S6. */
-export type CellKind = 'empty' | 'belt' | 'inlet' | 'outlet' | 'splitter' | 'sorter';
+export type CellKind = 'empty' | 'belt' | 'inlet' | 'outlet' | 'splitter' | 'sorter' | 'waste';
 
 export interface Cell {
   kind: CellKind;
@@ -178,6 +183,15 @@ export interface WorldState {
 
   /** Деньги. */
   money: number;
+
+  /**
+   * Куча отходов: всё, что не переработано. По составу, потому что в S14
+   * её начнут раскапывать обратно.
+   */
+  pile: Record<MaterialId, number>;
+
+  /** Бой в куче. Отдельно: это уже не стекло. */
+  pileBroken: number;
 
   /** Итоги текущего дня. */
   today: DayStats;

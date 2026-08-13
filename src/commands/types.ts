@@ -37,6 +37,19 @@ export interface PlaceSplitterCommand {
   dir: Direction;
 }
 
+export interface PlaceWasteCommand {
+  type: 'PLACE_WASTE';
+  cx: number;
+  cy: number;
+  dir: Direction;
+}
+
+/** Вывезти часть кучи за деньги. */
+export interface DisposeWasteCommand {
+  type: 'DISPOSE_WASTE';
+  units: number;
+}
+
 export interface PlaceSorterCommand {
   type: 'PLACE_SORTER';
   cx: number;
@@ -95,6 +108,8 @@ export type Command =
   | PlaceOutletCommand
   | PlaceSplitterCommand
   | PlaceSorterCommand
+  | PlaceWasteCommand
+  | DisposeWasteCommand
   | SetFilterCommand
   | ShipOutletCommand
   | RemoveCellCommand

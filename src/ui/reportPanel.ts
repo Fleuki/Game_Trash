@@ -10,6 +10,7 @@ export interface ReportPanel {
     money: number,
     reputation: number,
     contracts: readonly Contract[],
+    pile: number,
     isEvening: boolean,
   ): void;
 }
@@ -28,17 +29,18 @@ export function createReportPanel(element: HTMLElement): ReportPanel {
   let signature = '';
 
   return {
-    update(day, stats, batch, money, reputation, contracts, isEvening): void {
+    update(day, stats, batch, money, reputation, contracts, pile, isEvening): void {
       element.hidden = !isEvening;
       if (!isEvening) return;
 
-      const next = `${day}|${stats.earned}|${stats.spent}|${stats.shipments.length}|${money}|${stats.contractsDone}|${stats.contractsFailed}`;
+      const next = `${day}|${stats.earned}|${stats.spent}|${stats.shipments.length}|${money}|${stats.contractsDone}|${stats.contractsFailed}|${pile}`;
       if (next === signature) return;
       signature = next;
 
       const left = batch ? batch.remaining : 0;
       const onBelts = stats.arrived - stats.processed;
-      const profit = stats.earned - stats.spent + stats.refunded - stats.penalties;
+      const profit =
+        stats.earned - stats.spent + stats.refunded - stats.penalties - stats.disposalCost;
 
       const lines: string[] = [
         `Итоги дня ${day}`,
@@ -48,6 +50,11 @@ export function createReportPanel(element: HTMLElement): ReportPanel {
         row('Не приехало', `${left} ед`),
         row('Дошло до приёмников', `${stats.processed} ед`),
         row('Осталось на лентах', `${Math.max(0, onBelts)} ед`),
+        '',
+        row('Куча', `${pile} ед (${pile - stats.pileAtStart >= 0 ? '+' : ''}${pile - stats.pileAtStart} за день)`),
+        ...(stats.disposedUnits > 0
+          ? [row('  вывезено', `${stats.disposedUnits} ед за ${stats.disposalCost} ₽`)]
+          : []),
         '',
       ];
 
@@ -92,6 +99,7 @@ export function createReportPanel(element: HTMLElement): ReportPanel {
           : []),
         row('Потрачено на стройку', `${stats.spent} ₽`),
         row('Возвращено за снос', `${stats.refunded} ₽`),
+        ...(stats.disposalCost > 0 ? [row('Вывоз кучи', `${stats.disposalCost} ₽`)] : []),
         row('Итог дня', `${profit >= 0 ? '+' : ''}${profit} ₽`),
         row('Баланс', `${money} ₽`),
         row('Репутация', `${reputation >= 0 ? '+' : ''}${reputation}`),

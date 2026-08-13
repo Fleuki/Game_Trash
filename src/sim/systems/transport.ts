@@ -2,6 +2,7 @@ import { ITEM_GAP, SPAWN_INTERVAL_TICKS, STEP } from '../../config/balance';
 import { cooldownTicks } from '../../config/machines';
 import { MATERIAL_IDS, type MaterialId } from '../../config/materials';
 import { neighbourIndex, sideDirection } from '../grid';
+import { addToPile } from '../pile';
 import { nextFloat } from '../rng';
 import { errorChance, glassBreakChance } from '../sorting';
 import { exitDirection } from '../routing';
@@ -121,7 +122,7 @@ function limitFor(
   if (!accepts(next)) return 1;
 
   // Сток принимает всегда и мгновенно.
-  if (next.kind === 'outlet') return Number.POSITIVE_INFINITY;
+  if (next.kind === 'outlet' || next.kind === 'waste') return Number.POSITIVE_INFINITY;
 
   const lastInNext = next.items[next.items.length - 1];
   if (!lastInNext) return 2;
@@ -166,7 +167,13 @@ function move(world: WorldState): void {
       const next = nextIndex === null ? undefined : world.cells[nextIndex];
       if (nextIndex === null || !accepts(next)) continue;
 
-      transfers.push({ item, from: index, to: nextIndex, consumed: next.kind === 'outlet', exit });
+      transfers.push({
+        item,
+        from: index,
+        to: nextIndex,
+        consumed: next.kind === 'outlet' || next.kind === 'waste',
+        exit,
+      });
     }
   }
 
@@ -188,6 +195,12 @@ function move(world: WorldState): void {
     // Приёмник забирает предмет и запоминает его материал: из этого потом
     // считается чистота партии.
     if (transfer.consumed) {
+      if (to.kind === 'waste') {
+        // Сброс: всё уезжает в кучу и оттуда никуда не девается — GDD §7.
+        addToPile(world, transfer.item.material, transfer.item.broken);
+        world.today.processed++;
+        continue;
+      }
       // Бой считается отдельно: это уже не стекло, продать его как стекло нельзя.
       if (transfer.item.broken) to.broken++;
       else to.collected[transfer.item.material]++;

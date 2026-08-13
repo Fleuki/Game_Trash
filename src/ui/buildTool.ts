@@ -5,7 +5,15 @@ import type { CellCoord, CellPlacement } from '../sim/types';
 
 
 /** Что делает протяжка по полю. «Рука» ничего не строит и просто двигает камеру. */
-export type BuildMode = 'belt' | 'inlet' | 'outlet' | 'splitter' | MachineKind | 'erase' | 'hand';
+export type BuildMode =
+  | 'belt'
+  | 'inlet'
+  | 'outlet'
+  | 'waste'
+  | 'splitter'
+  | MachineKind
+  | 'erase'
+  | 'hand';
 
 /** Что кладёт текущая протяжка. Режим «рука» до инструмента не доходит. */
 export type BuildAction = Exclude<BuildMode, 'hand'>;
@@ -144,11 +152,13 @@ export function createBuildTool(): BuildTool {
       const type =
         action === 'inlet'
           ? 'PLACE_INLET'
-          : action === 'outlet'
-            ? 'PLACE_OUTLET'
-            : action === 'splitter'
-              ? 'PLACE_SPLITTER'
-              : 'PLACE_BELT';
+          : action === 'waste'
+            ? 'PLACE_WASTE'
+            : action === 'outlet'
+              ? 'PLACE_OUTLET'
+              : action === 'splitter'
+                ? 'PLACE_SPLITTER'
+                : 'PLACE_BELT';
       return planned.map((cell) => ({ type, cx: cell.cx, cy: cell.cy, dir: cell.dir }));
     },
 

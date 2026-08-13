@@ -39,7 +39,8 @@ export interface DebugStats {
 const MODE_LABEL: Record<BuildMode, string> = {
   belt: 'лента',
   inlet: 'источник',
-  outlet: 'сток',
+  outlet: 'приёмник',
+  waste: 'сброс',
   splitter: 'развилка',
   manual: 'стол',
   magnet: 'магнит',

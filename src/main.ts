@@ -11,6 +11,7 @@ import {
 import { cellIndex } from './sim/grid';
 import { purityOf } from './sim/purity';
 import { valueOf } from './sim/economy';
+import { pileTotal } from './sim/pile';
 import { effectiveAccuracy } from './sim/sorting';
 import { hashWorld } from './sim/hash';
 import type { CellCoord } from './sim/types';
@@ -19,6 +20,7 @@ import { createWorld } from './sim/world';
 import { createBuildTool, type BuildAction, type BuildMode } from './ui/buildTool';
 import { createDayBar } from './ui/dayBar';
 import { createContractsPanel } from './ui/contractsPanel';
+import { createPilePanel } from './ui/pilePanel';
 import { createMarketPanel } from './ui/marketPanel';
 import { createReportPanel } from './ui/reportPanel';
 import { createDebugOverlay } from './ui/debugOverlay';
@@ -43,6 +45,7 @@ async function main(): Promise<void> {
   const marketElement = document.querySelector<HTMLElement>('#market');
   const reportElement = document.querySelector<HTMLElement>('#report');
   const contractsElement = document.querySelector<HTMLElement>('#contracts');
+  const pileElement = document.querySelector<HTMLElement>('#pile');
   if (
     !stage ||
     !overlayElement ||
@@ -52,7 +55,8 @@ async function main(): Promise<void> {
     !dayBarElement ||
     !marketElement ||
     !reportElement ||
-    !contractsElement
+    !contractsElement ||
+    !pileElement
   ) {
     throw new Error('Разметка неполная');
   }
@@ -105,6 +109,9 @@ async function main(): Promise<void> {
   );
 
   const contractsPanel = createContractsPanel(contractsElement);
+  const pilePanel = createPilePanel(pileElement, (units) => {
+    commands.push({ type: 'DISPOSE_WASTE', units });
+  });
 
   const reportPanel = createReportPanel(reportElement);
 
@@ -222,6 +229,7 @@ async function main(): Promise<void> {
       KeyB: 'belt',
       KeyI: 'inlet',
       KeyO: 'outlet',
+      KeyW: 'waste',
       KeyR: 'splitter',
       Digit1: 'manual',
       Digit2: 'magnet',
@@ -249,8 +257,11 @@ async function main(): Promise<void> {
   let accumulator = 0;
   let lastFrameMs = performance.now();
 
-  /** Секунды, что вкладка была видима. Ожидание по тикам считается от него. */
-  let visibleSeconds = 0;
+  /**
+   * Сколько тиков причиталось за время работы. С ускорением времени ожидание
+   * растёт вчетверо, иначе дрейф показывал бы чушь на любой скорости кроме ×1.
+   */
+  let expectedTicks = 0;
   /** Шаги, отброшенные клампом: фон и фризы. */
   let skippedTicks = 0;
 
@@ -284,7 +295,7 @@ async function main(): Promise<void> {
     if (rawDelta > delta) skippedTicks += (rawDelta - delta) * TICK_RATE;
 
     accumulator += delta;
-    visibleSeconds += delta;
+    expectedTicks += delta * TICK_RATE * timeScale;
 
     const simStartMs = performance.now();
     let ticksThisFrame = 0;
@@ -332,6 +343,12 @@ async function main(): Promise<void> {
       world.phase === 'morning',
     );
     contractsPanel.update(world.contracts, world.day);
+    pilePanel.update({
+      pile: world.pile,
+      broken: world.pileBroken,
+      total: pileTotal(world),
+      money: world.money,
+    });
     reportPanel.update(
       world.day,
       world.today,
@@ -339,6 +356,7 @@ async function main(): Promise<void> {
       world.money,
       world.reputation,
       world.contracts,
+      pileTotal(world),
       world.phase === 'evening',
     );
 
@@ -380,7 +398,7 @@ async function main(): Promise<void> {
       tps,
       fps,
       stepMs,
-      drift: world.tick - visibleSeconds * TICK_RATE,
+      drift: world.tick - expectedTicks,
       skipped: skippedTicks,
       backend: renderer.backend,
       hover,
