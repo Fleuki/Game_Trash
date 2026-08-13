@@ -1,7 +1,8 @@
 import { Application, Container } from 'pixi.js';
 import { COLOR_BACKGROUND } from '../config/view';
-import type { WorldState } from '../sim/types';
-import type { Camera, CellCoord } from './camera';
+import type { CellCoord, CellPlacement, WorldState } from '../sim/types';
+import { createBeltLayer } from './beltLayer';
+import type { Camera } from './camera';
 import { createGridLayer } from './gridLayer';
 
 /** Всё, что нужно нарисовать кадр. Рендер читает это и ничего из этого не меняет. */
@@ -10,6 +11,9 @@ export interface Frame {
   camera: Camera;
   /** Клетка под курсором или null. */
   hover: CellCoord | null;
+  /** Незавершённая протяжка: то, что появится, если отпустить сейчас. */
+  ghost: readonly CellPlacement[];
+  ghostAction: 'build' | 'erase';
   /** Доля шага, накопленная сверх последнего тика (0..1) — для интерполяции. */
   alpha: number;
 }
@@ -42,7 +46,9 @@ export async function createRenderer(container: HTMLElement): Promise<Renderer> 
   // а не пересчёт координат каждого объекта.
   const viewport = new Container();
   const grid = createGridLayer();
-  viewport.addChild(grid.container);
+  const belts = createBeltLayer();
+  // Порядок: сетка снизу, ленты поверх неё, подсветка клетки — самой верхней.
+  viewport.addChild(grid.container, belts.container, grid.hoverContainer);
   app.stage.addChild(viewport);
 
   return {
@@ -56,6 +62,7 @@ export async function createRenderer(container: HTMLElement): Promise<Renderer> 
       const { camera } = frame;
       grid.syncZoom(camera.zoom);
       grid.setHover(frame.hover);
+      belts.sync(frame.world, frame.ghost, frame.ghostAction);
 
       viewport.scale.set(camera.zoom);
       viewport.position.set(

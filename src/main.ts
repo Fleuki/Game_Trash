@@ -1,3 +1,4 @@
+import { createCommandQueue } from './commands/dispatch';
 import { MAX_FRAME_DELTA, STEP, TICK_RATE } from './config/balance';
 import { createRenderer } from './render/app';
 import {
@@ -6,54 +7,128 @@ import {
   fitToScreen,
   panByScreen,
   zoomAtScreen,
-  type CellCoord,
 } from './render/camera';
+import type { CellCoord } from './sim/types';
 import { step } from './sim/step';
 import { createWorld } from './sim/world';
+import { createBuildTool, type BuildMode } from './ui/buildTool';
 import { createDebugOverlay } from './ui/debugOverlay';
-import { attachPointerInput } from './ui/pointer';
+import { attachPointerInput, type DragKind, type ScreenPoint } from './ui/pointer';
+import { createToolbar } from './ui/toolbar';
 
 /**
  * Склейка: цикл, симуляция, ввод, рендер, оверлей.
  *
- * Единственное место, где живёт реальное время. Симуляция про часы не знает и знать
- * не должна — она считает шаги.
+ * Единственное место, где живёт реальное время, и единственное, где решается,
+ * что значит жест: строить, сносить или двигать поле.
  */
 async function main(): Promise<void> {
   const stage = document.querySelector<HTMLElement>('#stage');
   const overlayElement = document.querySelector<HTMLElement>('#debug-overlay');
-  if (!stage || !overlayElement) throw new Error('Разметка не содержит #stage или #debug-overlay');
+  const toolbarElement = document.querySelector<HTMLElement>('#toolbar');
+  if (!stage || !overlayElement || !toolbarElement) throw new Error('Разметка неполная');
 
   const world = createWorld();
+  const commands = createCommandQueue();
   const renderer = await createRenderer(stage);
   const overlay = createDebugOverlay(overlayElement);
+  const buildTool = createBuildTool();
 
   const camera = createCamera();
-  const view = renderer.getViewSize();
-  fitToScreen(camera, view.width, view.height);
+  const initialView = renderer.getViewSize();
+  fitToScreen(camera, initialView.width, initialView.height);
 
+  let mode: BuildMode = 'build';
   let hover: CellCoord | null = null;
   let lastTap: CellCoord | null = null;
+  /** Тащим камеру: режим «рука», средняя кнопка или зажатый пробел. */
+  let panning = false;
+  let spaceHeld = false;
+  let beltCount = 0;
+
+  const toolbar = createToolbar(toolbarElement, (picked) => {
+    mode = picked;
+    toolbar.setMode(mode);
+  });
+  toolbar.setMode(mode);
+
+  function cellAt(point: ScreenPoint): CellCoord | null {
+    const size = renderer.getViewSize();
+    return cellAtScreen(camera, point.x, point.y, size.width, size.height);
+  }
 
   attachPointerInput(stage, {
-    onPan(deltaX, deltaY) {
+    onDragStart(point, kind: DragKind) {
+      // Средняя кнопка и пробел двигают поле всегда, в любом режиме:
+      // иначе в режиме стройки некуда деться.
+      if (kind === 'auxiliary' || spaceHeld || mode === 'hand') {
+        panning = true;
+        return;
+      }
+      const cell = cellAt(point);
+      if (!cell) return;
+      buildTool.begin(cell, kind === 'secondary' || mode === 'erase' ? 'erase' : 'build');
+    },
+
+    onDragMove(point, deltaX, deltaY) {
+      if (panning) {
+        panByScreen(camera, deltaX, deltaY);
+        return;
+      }
+      buildTool.extend(cellAt(point));
+    },
+
+    onDragEnd(point, wasTap) {
+      if (panning) {
+        panning = false;
+        return;
+      }
+      if (wasTap) lastTap = cellAt(point);
+      for (const command of buildTool.commit()) commands.push(command);
+    },
+
+    onDragCancel() {
+      panning = false;
+      buildTool.cancel();
+    },
+
+    onPinch(deltaX, deltaY, factor, centerX, centerY) {
+      const size = renderer.getViewSize();
       panByScreen(camera, deltaX, deltaY);
+      zoomAtScreen(camera, factor, centerX, centerY, size.width, size.height);
     },
-    onZoom(factor, screenX, screenY) {
+
+    onWheelZoom(factor, x, y) {
       const size = renderer.getViewSize();
-      zoomAtScreen(camera, factor, screenX, screenY, size.width, size.height);
+      zoomAtScreen(camera, factor, x, y, size.width, size.height);
     },
-    onHover(screenX, screenY) {
-      const size = renderer.getViewSize();
-      hover = cellAtScreen(camera, screenX, screenY, size.width, size.height);
+
+    onHover(point) {
+      hover = cellAt(point);
     },
+
     onHoverEnd() {
       hover = null;
     },
-    onTap(screenX, screenY) {
-      const size = renderer.getViewSize();
-      lastTap = cellAtScreen(camera, screenX, screenY, size.width, size.height);
-    },
+  });
+
+  document.addEventListener('keydown', (event: KeyboardEvent) => {
+    if (event.code === 'Space') spaceHeld = true;
+    if (event.code === 'Escape') buildTool.cancel();
+    const byKey: Record<string, BuildMode> = { KeyB: 'build', KeyE: 'erase', KeyH: 'hand' };
+    const picked = byKey[event.code];
+    if (picked) {
+      mode = picked;
+      toolbar.setMode(mode);
+    }
+  });
+  document.addEventListener('keyup', (event: KeyboardEvent) => {
+    if (event.code === 'Space') spaceHeld = false;
+  });
+
+  window.addEventListener('resize', () => {
+    const size = renderer.getViewSize();
+    fitToScreen(camera, size.width, size.height);
   });
 
   /** Нерастраченное время, накопленное к следующему шагу. */
@@ -72,6 +147,7 @@ async function main(): Promise<void> {
   let tps = 0;
   let fps = 0;
   let stepMs = 0;
+  let countedRevision = -1;
 
   // Возврат из фона. requestAnimationFrame в фоне не вызывается, поэтому первый кадр
   // после возврата принёс бы всю паузу целиком. Время паузы не догоняем, а списываем:
@@ -99,7 +175,8 @@ async function main(): Promise<void> {
     const simStartMs = performance.now();
     let ticksThisFrame = 0;
     while (accumulator >= STEP) {
-      step(world);
+      // drain() отдаёт накопленное только первому шагу кадра, остальные получают пусто.
+      step(world, commands.drain());
       accumulator -= STEP;
       ticksThisFrame++;
     }
@@ -118,7 +195,20 @@ async function main(): Promise<void> {
       sampleSeconds = 0;
     }
 
-    renderer.render({ world, camera, hover, alpha: accumulator / STEP });
+    // Лент на поле — для оверлея. Пересчитываем только когда постройка изменилась.
+    if (world.revision !== countedRevision) {
+      countedRevision = world.revision;
+      beltCount = world.cells.reduce((total, cell) => total + (cell.kind === 'belt' ? 1 : 0), 0);
+    }
+
+    renderer.render({
+      world,
+      camera,
+      hover,
+      ghost: buildTool.preview,
+      ghostAction: buildTool.action,
+      alpha: accumulator / STEP,
+    });
 
     overlay.update({
       tick: world.tick,
@@ -131,10 +221,18 @@ async function main(): Promise<void> {
       hover,
       lastTap,
       zoom: camera.zoom,
+      mode,
+      belts: beltCount,
     });
   }
 
   requestAnimationFrame(frame);
+
+  // Отладочный доступ к миру и камере: нужен для автопроверок и ручного ковыряния
+  // в консоли. В сборку не попадает.
+  if (import.meta.env.DEV) {
+    (window as unknown as { game: unknown }).game = { world, camera };
+  }
 }
 
 void main();

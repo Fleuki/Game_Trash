@@ -1,4 +1,6 @@
-import type { CellCoord } from '../render/camera';
+
+import type { CellCoord } from '../sim/types';
+import type { BuildMode } from './buildTool';
 
 /** Показания цикла и камеры за последний замер. */
 export interface DebugStats {
@@ -23,7 +25,16 @@ export interface DebugStats {
   /** Последняя клетка, по которой кликнули или тапнули. */
   lastTap: CellCoord | null;
   zoom: number;
+  mode: BuildMode;
+  /** Сколько клеток занято лентой. */
+  belts: number;
 }
+
+const MODE_LABEL: Record<BuildMode, string> = {
+  build: 'лента',
+  erase: 'снос',
+  hand: 'рука',
+};
 
 const UPDATE_INTERVAL_MS = 250;
 
@@ -60,6 +71,8 @@ export function createDebugOverlay(element: HTMLElement): { update(stats: DebugS
         pad('курсор', formatCell(stats.hover)),
         pad('клик', formatCell(stats.lastTap)),
         pad('зум', `×${stats.zoom.toFixed(2)}`),
+        pad('режим', MODE_LABEL[stats.mode]),
+        pad('лент', String(stats.belts)),
       ].join('\n');
     },
   };

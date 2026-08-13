@@ -1,7 +1,11 @@
 /** Параметры камеры и ввода. Всё, что можно захотеть покрутить руками, — здесь. */
 
-/** Минимальный зум: вся площадка целиком плюс запас. */
-export const MIN_ZOOM = 0.25;
+/**
+ * Минимальный зум. Подобран так, чтобы площадка 32×20 целиком влезала в экран
+ * шириной 360 px: 360 / (32 × 64) = 0.176, с полем по краям — чуть меньше.
+ * Клетка при этом около 10 px: смотреть можно, строить нет — для этого приближают.
+ */
+export const MIN_ZOOM = 0.15;
 
 /** Максимальный зум: клетка крупная, видно, что в ней происходит. */
 export const MAX_ZOOM = 2.5;
@@ -23,3 +27,6 @@ export const COLOR_BACKGROUND = 0x1b1b1a;
 export const COLOR_GRID_LINE = 0x2f2e2b;
 export const COLOR_GRID_BORDER = 0x4a4843;
 export const COLOR_CELL_HOVER = 0x6f9a5c;
+export const COLOR_BELT = 0x46433c;
+export const COLOR_BELT_ARROW = 0x938d7c;
+export const COLOR_ERASE = 0xa8524a;

@@ -1,11 +1,6 @@
 import { GRID_HEIGHT, GRID_WIDTH, TILE_SIZE, WORLD_HEIGHT, WORLD_WIDTH } from '../config/grid';
 import { FIT_PADDING, MAX_ZOOM, MIN_ZOOM } from '../config/view';
-
-/** Координаты клетки на площадке. */
-export interface CellCoord {
-  cx: number;
-  cy: number;
-}
+import type { CellCoord } from '../sim/types';
 
 /** Точка в мировых единицах. */
 export interface WorldPoint {

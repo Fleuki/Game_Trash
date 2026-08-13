@@ -32,3 +32,29 @@ body {
   pointer-events: none;
   user-select: none;
 }
+
+#toolbar {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  display: flex;
+  gap: 6px;
+}
+
+#toolbar button {
+  padding: 10px 16px;
+  min-width: 68px;
+  min-height: 44px; /* палец: минимальная зона касания из PLAN §9 */
+  font: 13px/1 ui-monospace, Menlo, Consolas, monospace;
+  color: #d8d4c8;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(216, 212, 200, 0.2);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#toolbar button.is-active {
+  color: #1b1b1a;
+  background: #6f9a5c;
+  border-color: #6f9a5c;
+}

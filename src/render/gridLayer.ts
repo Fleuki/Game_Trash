@@ -1,14 +1,17 @@
 import { Container, Graphics } from 'pixi.js';
 import { GRID_HEIGHT, GRID_WIDTH, TILE_SIZE, WORLD_HEIGHT, WORLD_WIDTH } from '../config/grid';
+import type { CellCoord } from '../sim/types';
 import {
   COLOR_CELL_HOVER,
   COLOR_GRID_BORDER,
   COLOR_GRID_LINE,
 } from '../config/view';
-import type { CellCoord } from './camera';
+
 
 export interface GridLayer {
   container: Container;
+  /** Подсветка отдельно: она рисуется поверх лент, а сетка — под ними. */
+  hoverContainer: Container;
   /** Подсветить клетку под курсором. null — курсор вне площадки. */
   setHover(cell: CellCoord | null): void;
   /** Сообщить текущий зум: толщина линий пересчитывается, чтобы сетка не пропадала. */
@@ -21,10 +24,12 @@ const ZOOM_REBUILD_THRESHOLD = 0.02;
 export function createGridLayer(): GridLayer {
   const container = new Container();
 
+  const hoverContainer = new Container();
   const field = new Graphics();
   const lines = new Graphics();
   const hover = new Graphics();
-  container.addChild(field, lines, hover);
+  container.addChild(field, lines);
+  hoverContainer.addChild(hover);
 
   field.rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT).fill(0x232220);
 
@@ -64,6 +69,7 @@ export function createGridLayer(): GridLayer {
 
   return {
     container,
+    hoverContainer,
 
     setHover(cell: CellCoord | null): void {
       const same =
