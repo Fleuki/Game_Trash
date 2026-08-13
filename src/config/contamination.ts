@@ -11,6 +11,10 @@ export const IMPURITY_WEIGHT: Record<MaterialId, number> = {
   aluminium: 1,
   glass: 1,
   organic: 2,
+  // Батарейка в партии — это не просто чужая единица, это протёкший
+  // электролит: считается как органика. Электроника просто мешается.
+  battery: 2,
+  electronics: 1,
 };
 
 /**

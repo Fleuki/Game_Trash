@@ -1,7 +1,8 @@
 import { ITEM_GAP, SPAWN_INTERVAL_TICKS, STEP } from '../../config/balance';
 import { CRAFTERS, craftCooldownTicks } from '../../config/crafters';
 import { cooldownTicks } from '../../config/machines';
-import { MATERIAL_IDS, type MaterialId } from '../../config/materials';
+import { MATERIAL_IDS, NEWCOMER_IDS, type MaterialId } from '../../config/materials';
+import { MATERIAL_PRICE } from '../../config/economy';
 import { neighbourIndex, sideDirection } from '../grid';
 import { addToPile, takeFromPile } from '../pile';
 import { unitPrice } from '../economy';
@@ -69,6 +70,18 @@ function accepts(cell: Cell | undefined): cell is Cell {
  * Источники выпускают по предмету, если у них есть куда его положить.
  * Забился вход — источник встаёт вместе с линией, а не сыплет предметы друг в друга.
  */
+/**
+ * Записать, что дорогая единица ушла мимо.
+ *
+ * Считаем по полной цене: игрок должен видеть не «сколько недоплатили», а
+ * сколько эта единица стоила бы, попади она в свою фракцию.
+ */
+function countNewcomerLoss(world: WorldState, item: Item): void {
+  if (!NEWCOMER_IDS.includes(item.material)) return;
+  world.today.newLost++;
+  world.today.newLostValue += MATERIAL_PRICE[item.material];
+}
+
 function spawn(world: WorldState): void {
   world.spawnTimer++;
   if (world.spawnTimer < SPAWN_INTERVAL_TICKS) return;
@@ -102,9 +115,11 @@ function spawn(world: WorldState): void {
     batch.remaining--;
     world.today.arrived++;
     world.totalArrived++;
+    const material = rollMaterial(world, batch.composition);
+    if (NEWCOMER_IDS.includes(material)) world.today.newArrived++;
     cell.items.push({
       id: world.nextItemId++,
-      material: rollMaterial(world, batch.composition),
+      material,
       t: 0,
       dirIn: cell.dir,
       exitSide: false,
@@ -228,9 +243,14 @@ function move(world: WorldState): void {
       if (to.kind === 'waste') {
         // Сброс: всё уезжает в кучу и оттуда никуда не девается — GDD §7.
         addToPile(world, transfer.item.material, transfer.item.broken);
+        countNewcomerLoss(world, transfer.item);
         world.today.processed++;
         continue;
       }
+      // Новичок в приёмнике, который его не ждал, — это не выручка, а примесь:
+      // партия просядет по чистоте, а дорогая единица уедет за цену чужой
+      // фракции. Именно это и должно быть видно в отчёте — GDD §12.
+      if (!to.filter.includes(transfer.item.material)) countNewcomerLoss(world, transfer.item);
       // Бой считается отдельно: это уже не стекло, продать его как стекло нельзя.
       if (transfer.item.broken) to.broken++;
       else {

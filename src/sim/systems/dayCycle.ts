@@ -1,7 +1,8 @@
 import { DAY_LENGTH_TICKS } from '../../config/balance';
 import { generateMarket } from './market';
 import { checkDeadlines, generateContractOffers } from './contracts';
-import { MATERIAL_IDS } from '../../config/materials';
+import { MATERIAL_IDS, NEWCOMER_IDS } from '../../config/materials';
+import { MATERIAL_PRICE } from '../../config/economy';
 import { pileTotal } from '../pile';
 import { PLOT_UPKEEP } from '../../config/plots';
 import { CERTIFICATION_DAY } from '../../config/certification';
@@ -46,6 +47,13 @@ export function dayCycle(world: WorldState): void {
     const share = Math.min(left, Math.round(batch.remaining * batch.composition[id]));
     world.pile[id] += share;
     left -= share;
+    // Недовезённые новички тоже потеря: партия за них заплачена, а лежат
+    // они в куче. В отчёт идут одной строкой с теми, что ушли мимо фракции.
+    if (share > 0 && NEWCOMER_IDS.includes(id)) {
+      world.today.newArrived += share;
+      world.today.newLost += share;
+      world.today.newLostValue += share * MATERIAL_PRICE[id];
+    }
   }
   if (left > 0) world.pile.pet += left;
   batch.remaining = 0;

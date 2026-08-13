@@ -5,22 +5,46 @@ import {
   OFFERS_MIN,
   type DistrictId,
 } from '../../config/districts';
-import { MATERIAL_IDS, type MaterialId } from '../../config/materials';
+import { BASE_MATERIAL_IDS, MATERIAL_IDS, NEWCOMER_IDS, type MaterialId } from '../../config/materials';
+import { newcomerShare } from '../../config/newcomers';
 import { nextFloat, nextInt } from '../rng';
 import type { Offer, WorldState } from '../types';
 
-/** Случайный состав для старой свалки: доли по всем материалам, в сумме единица. */
+function emptyComposition(): Record<MaterialId, number> {
+  const shares = {} as Record<MaterialId, number>;
+  for (const id of MATERIAL_IDS) shares[id] = 0;
+  return shares;
+}
+
+/** Случайный состав для старой свалки: доли по базовым материалам, в сумме единица. */
 function lotteryComposition(world: WorldState): Record<MaterialId, number> {
-  const weights: Record<MaterialId, number> = { pet: 0, aluminium: 0, glass: 0, organic: 0 };
+  const weights = emptyComposition();
   let total = 0;
-  for (const id of MATERIAL_IDS) {
+  for (const id of BASE_MATERIAL_IDS) {
     // Возведение в квадрат делает состав неровным: свалка бывает и щедрой, и мусорной.
     const weight = nextFloat(world) ** 2 + 0.05;
     weights[id] = weight;
     total += weight;
   }
-  for (const id of MATERIAL_IDS) weights[id] /= total;
+  for (const id of BASE_MATERIAL_IDS) weights[id] /= total;
   return weights;
+}
+
+/**
+ * Подмешать новичков — GDD §12.
+ *
+ * Свою долю они отбирают у старых фракций пропорционально: поток не растёт,
+ * меняется его состав. До 20-го дня доли нулевые, и функция ничего не делает.
+ */
+function mixNewcomers(composition: Record<MaterialId, number>, day: number): Record<MaterialId, number> {
+  let taken = 0;
+  for (const id of NEWCOMER_IDS) taken += newcomerShare(id, day);
+  if (taken <= 0) return composition;
+
+  const mixed = emptyComposition();
+  for (const id of BASE_MATERIAL_IDS) mixed[id] = composition[id] * (1 - taken);
+  for (const id of NEWCOMER_IDS) mixed[id] = newcomerShare(id, day);
+  return mixed;
 }
 
 function makeOffer(world: WorldState, district: DistrictId): Offer {
@@ -29,7 +53,10 @@ function makeOffer(world: WorldState, district: DistrictId): Offer {
   return {
     district,
     volume: min + nextInt(world, max - min + 1),
-    composition: info.composition ? { ...info.composition } : lotteryComposition(world),
+    composition: mixNewcomers(
+      info.composition ? { ...info.composition } : lotteryComposition(world),
+      world.day,
+    ),
   };
 }
 

@@ -12,7 +12,10 @@ export interface District {
   label: string;
   /** Чем этот район отличается от прочих. Видно игроку до покупки. */
   note: string;
-  /** Доли материалов, в сумме единица. null — состав каждый раз новый (свалка). */
+  /**
+   * Доли материалов, в сумме единица. null — состав каждый раз новый (свалка).
+   * Новички здесь всегда нули: их долю подмешивает рынок, и только с 20-го дня.
+   */
   composition: Record<MaterialId, number> | null;
   /** Разброс объёма партии в единицах. */
   volume: readonly [number, number];
@@ -22,25 +25,25 @@ export const DISTRICTS: Record<DistrictId, District> = {
   residential: {
     label: 'Спальный район',
     note: 'Стабильно и скучно',
-    composition: { pet: 0.5, glass: 0.2, organic: 0.25, aluminium: 0.05 },
+    composition: { pet: 0.5, glass: 0.2, organic: 0.25, aluminium: 0.05, battery: 0, electronics: 0 },
     volume: [300, 420],
   },
   business: {
     label: 'Бизнес-центр',
     note: 'Много объёма, мало примесей',
-    composition: { pet: 0.7, aluminium: 0.15, organic: 0.1, glass: 0.05 },
+    composition: { pet: 0.7, aluminium: 0.15, organic: 0.1, glass: 0.05, battery: 0, electronics: 0 },
     volume: [450, 600],
   },
   private: {
     label: 'Частный сектор',
     note: 'Дорогое содержимое, но липкое месиво',
-    composition: { aluminium: 0.3, glass: 0.2, pet: 0.2, organic: 0.3 },
+    composition: { aluminium: 0.3, glass: 0.2, pet: 0.2, organic: 0.3, battery: 0, electronics: 0 },
     volume: [250, 350],
   },
   construction: {
     label: 'Стройка',
     note: 'Однородное и тяжёлое',
-    composition: { glass: 0.6, aluminium: 0.25, pet: 0.15, organic: 0 },
+    composition: { glass: 0.6, aluminium: 0.25, pet: 0.15, organic: 0, battery: 0, electronics: 0 },
     volume: [350, 450],
   },
   dump: {

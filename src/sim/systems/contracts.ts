@@ -4,6 +4,7 @@ import {
   CONTRACT_OFFERS,
   CONTRACT_PURITY,
   CONTRACT_UNITS,
+  ARRIVAL_PER_DAY,
   MAX_ACTIVE_CONTRACTS,
   MIXED_CONTRACT_CHANCE,
   PENALTY_SHARE,
@@ -11,12 +12,21 @@ import {
   REPUTATION_REWARD_STEP,
 } from '../../config/contracts';
 import { MATERIAL_PRICE } from '../../config/economy';
-import { MATERIAL_IDS, type MaterialId } from '../../config/materials';
+import { MATERIAL_IDS, NEWCOMER_IDS, type MaterialId } from '../../config/materials';
+import { NEWCOMER_DAY } from '../../config/newcomers';
 import { nextFloat, nextInt } from '../rng';
 import type { Contract, ContractItem, WorldState } from '../types';
 
-/** Материалы, которые вообще имеет смысл заказывать: за органику не платят. */
-const ORDERABLE: readonly MaterialId[] = MATERIAL_IDS.filter((id) => MATERIAL_PRICE[id] > 0);
+/**
+ * Материалы, которые вообще имеет смысл заказывать: за органику не платят,
+ * а новичков нельзя просить раньше, чем они появятся в потоке — иначе заказ
+ * невыполним по условиям самой игры.
+ */
+function orderable(day: number): readonly MaterialId[] {
+  return MATERIAL_IDS.filter(
+    (id) => MATERIAL_PRICE[id] > 0 && (!NEWCOMER_IDS.includes(id) || day >= NEWCOMER_DAY),
+  );
+}
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
@@ -28,27 +38,32 @@ function reputationFactor(world: WorldState): number {
   return clamp(1 + world.reputation * REPUTATION_REWARD_STEP, min, max);
 }
 
-function makeItem(world: WorldState): ContractItem {
-  const material = ORDERABLE[nextInt(world, ORDERABLE.length)] ?? 'pet';
+/** Срок заказа выбирается первым: от него зависит, сколько вообще можно просить. */
+function makeItem(world: WorldState, days: number): ContractItem {
+  const pool = orderable(world.day);
+  const material = pool[nextInt(world, pool.length)] ?? 'pet';
   const [minUnits, maxUnits] = CONTRACT_UNITS;
   const purity = CONTRACT_PURITY[nextInt(world, CONTRACT_PURITY.length)] ?? 0.9;
+  const units = minUnits + nextInt(world, maxUnits - minUnits + 1);
   return {
     material,
-    units: minUnits + nextInt(world, maxUnits - minUnits + 1),
+    units: Math.max(1, Math.min(units, ARRIVAL_PER_DAY[material] * days)),
     minPurity: purity,
     delivered: 0,
   };
 }
 
 function makeContract(world: WorldState): Contract {
-  const items = [makeItem(world)];
+  const [minDays, maxDays] = CONTRACT_DAYS;
+  const days = minDays + nextInt(world, maxDays - minDays + 1);
+
+  const items = [makeItem(world, days)];
   // Смешанный заказ связывает параллельные линии в одну систему — GDD §9.
   if (nextFloat(world) < MIXED_CONTRACT_CHANCE) {
-    const second = makeItem(world);
+    const second = makeItem(world, days);
     if (second.material !== items[0]?.material) items.push(second);
   }
 
-  const [minDays, maxDays] = CONTRACT_DAYS;
   const base = items.reduce(
     // Чем выше требование к чистоте, тем дороже заказ: это и есть плата за труд.
     (sum, item) => sum + item.units * MATERIAL_PRICE[item.material] * (0.6 + item.minPurity * 0.6),
@@ -59,7 +74,7 @@ function makeContract(world: WorldState): Contract {
   return {
     id: world.nextContractId++,
     items,
-    deadlineDay: world.day + minDays + nextInt(world, maxDays - minDays + 1),
+    deadlineDay: world.day + days,
     reward,
     penalty: Math.round(reward * PENALTY_SHARE),
     status: 'active',

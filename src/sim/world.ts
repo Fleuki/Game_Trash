@@ -1,7 +1,7 @@
 import { BELT_SPEED_DEFAULT } from '../config/balance';
 import { GRID_HEIGHT, GRID_WIDTH } from '../config/grid';
 import { DIR_RIGHT } from './grid';
-import type { MaterialId } from '../config/materials';
+import { MATERIAL_IDS, type MaterialId } from '../config/materials';
 import { STARTING_MONEY } from '../config/economy';
 import { generateContractOffers } from './systems/contracts';
 import { generateMarket } from './systems/market';
@@ -66,7 +66,9 @@ export function createWorld(seed: number): WorldState {
 
 /** Пустой счётчик принятого: нули по всем материалам. */
 export function emptyCollected(): Record<MaterialId, number> {
-  return { pet: 0, aluminium: 0, glass: 0, organic: 0 };
+  const counts = {} as Record<MaterialId, number>;
+  for (const id of MATERIAL_IDS) counts[id] = 0;
+  return counts;
 }
 
 /** Пустые итоги дня. */
@@ -87,5 +89,8 @@ export function emptyDayStats(): DayStats {
     disposalCost: 0,
     dug: 0,
     upkeep: 0,
+    newArrived: 0,
+    newLost: 0,
+    newLostValue: 0,
   };
 }

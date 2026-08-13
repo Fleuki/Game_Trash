@@ -24,8 +24,8 @@ function row(label: string, value: string): string {
 /**
  * Вечерний отчёт по GDD §4.
  *
- * Строки про кучу отходов здесь пока нет: она появится в S13, а пустая строка
- * в отчёте ничего не значит.
+ * Строки, которым нечего сказать, не печатаются вовсе: пустая строка в отчёте
+ * ничего не значит, а список из нулей читать невозможно.
  */
 export function createReportPanel(element: HTMLElement): ReportPanel {
   let signature = '';
@@ -57,7 +57,7 @@ export function createReportPanel(element: HTMLElement): ReportPanel {
       element.hidden = !isEvening || closed;
       if (!isEvening || closed) return;
 
-      const next = `${day}|${stats.earned}|${stats.spent}|${stats.shipments.length}|${money}|${stats.contractsDone}|${stats.contractsFailed}|${pile}`;
+      const next = `${day}|${stats.earned}|${stats.spent}|${stats.shipments.length}|${money}|${stats.contractsDone}|${stats.contractsFailed}|${pile}|${stats.newArrived}|${stats.newLost}`;
       if (next === signature) return;
       signature = next;
 
@@ -87,6 +87,22 @@ export function createReportPanel(element: HTMLElement): ReportPanel {
         ...(stats.dug > 0 ? [row('  поднято из кучи', `${stats.dug} ед`)] : []),
         '',
       ];
+
+      // Новое в потоке — GDD §12. Строка появляется только когда новичок
+      // действительно приехал: до 20-го дня писать о нём нечего.
+      if (stats.newArrived > 0) {
+        lines.push(
+          'Батарейки и электроника',
+          row('  было в партии', `${stats.newArrived} ед`),
+          row(
+            '  ушло мимо',
+            stats.newLost > 0
+              ? `${stats.newLost} ед · потеряно ${Math.round(stats.newLostValue)} ₽`
+              : 'ничего, всё в своих фракциях',
+          ),
+          '',
+        );
+      }
 
       if (stats.shipments.length === 0) {
         lines.push('Ничего не отгружено');
