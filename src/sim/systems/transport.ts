@@ -1,7 +1,7 @@
 import { ITEM_GAP, SPAWN_INTERVAL_TICKS, STEP } from '../../config/balance';
 import { MACHINES, cooldownTicks } from '../../config/machines';
 import { SPAWN_MIX, SPAWN_MIX_TOTAL, type MaterialId } from '../../config/materials';
-import { neighbourIndex } from '../grid';
+import { neighbourIndex, sideDirection } from '../grid';
 import { nextFloat } from '../rng';
 import { exitDirection } from '../routing';
 import type { Cell, Direction, Item, WorldState } from '../types';
@@ -28,6 +28,34 @@ function rollMaterial(world: WorldState): MaterialId {
   return SPAWN_MIX[SPAWN_MIX.length - 1]?.material ?? 'pet';
 }
 
+/** Есть ли куда положить предмет в соседе по этому направлению. */
+function roomIn(world: WorldState, index: number, dir: Direction): boolean {
+  const nextIndex = neighbourIndex(index, dir);
+  const next = nextIndex === null ? undefined : world.cells[nextIndex];
+  if (!accepts(next)) return false;
+  if (next.kind === 'outlet') return true;
+  const last = next.items[next.items.length - 1];
+  return !last || last.t >= ITEM_GAP;
+}
+
+/**
+ * Развилка выбирает выход для головного предмета.
+ *
+ * Обычно она чередует стороны, чтобы делить поток поровну. Но если выбранная
+ * сторона забита, а вторая свободна — предмет уходит во вторую: делитель,
+ * который встаёт из-за затора в одной ветке, бесполезен.
+ */
+function chooseSplitterExit(world: WorldState, index: number, cell: Cell): void {
+  const head = cell.items[0];
+  if (!head) return;
+
+  const preferred = head.exitSide ? sideDirection(cell.dir) : cell.dir;
+  if (roomIn(world, index, preferred)) return;
+
+  const other = head.exitSide ? cell.dir : sideDirection(cell.dir);
+  if (roomIn(world, index, other)) head.exitSide = !head.exitSide;
+}
+
 /** Принимает ли клетка предметы. Пустая — не принимает, это конец ленты. */
 function accepts(cell: Cell | undefined): cell is Cell {
   return cell !== undefined && cell.kind !== 'empty';
@@ -51,7 +79,7 @@ function spawn(world: WorldState): void {
       material: rollMaterial(world),
       t: 0,
       dirIn: cell.dir,
-      misrouted: false,
+      exitSide: false,
     });
   }
 }
@@ -101,6 +129,7 @@ function move(world: WorldState): void {
     // простоя проходил бы мгновенно.
     if (cell.kind === 'sorter' && cell.cooldown > 0) cell.cooldown--;
     if (cell.items.length === 0) continue;
+    if (cell.kind === 'splitter') chooseSplitterExit(world, index, cell);
 
     for (let position = 0; position < cell.items.length; position++) {
       const item = cell.items[position];
@@ -151,12 +180,18 @@ function move(world: WorldState): void {
     transfer.item.t -= 1;
     transfer.item.dirIn = transfer.exit;
 
-    // Решение принимается один раз, на въезде: дальше предмет едет по нему,
-    // и рендер показывает то же самое, что посчитает симуляция.
+    // Решение о выходе принимается один раз, на въезде: дальше предмет едет по
+    // нему, и рендер показывает то же самое, что посчитает симуляция.
     if (to.kind === 'sorter' && to.machine) {
-      transfer.item.misrouted = nextFloat(world) >= MACHINES[to.machine].accuracy;
+      const wantsForward = to.filter.includes(transfer.item.material);
+      const wrong = nextFloat(world) >= MACHINES[to.machine].accuracy;
+      transfer.item.exitSide = wrong ? wantsForward : !wantsForward;
+    } else if (to.kind === 'splitter') {
+      // Делитель чередует стороны: поток расходится поровну.
+      transfer.item.exitSide = to.altOut;
+      to.altOut = !to.altOut;
     } else {
-      transfer.item.misrouted = false;
+      transfer.item.exitSide = false;
     }
 
     // В конец: предмет въезжает сзади и оказывается дальше всех от выхода.

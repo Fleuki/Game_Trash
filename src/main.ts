@@ -86,10 +86,8 @@ async function main(): Promise<void> {
   function openPanelAt(cell: CellCoord | null): void {
     if (mode !== 'hand' || !cell) return;
     const target = world.cells[cellIndex(cell.cx, cell.cy)];
-    if (
-      !target ||
-      (target.kind !== 'splitter' && target.kind !== 'sorter' && target.kind !== 'outlet')
-    ) {
+    // У развилки настраивать нечего: она не различает материалы.
+    if (!target || (target.kind !== 'sorter' && target.kind !== 'outlet')) {
       cellPanel.close();
       return;
     }
@@ -98,9 +96,7 @@ async function main(): Promise<void> {
       target.kind,
       target.filter,
       target.machine,
-      target.kind === 'outlet'
-        ? { collected: target.collected, purity: purityOf(target) }
-        : null,
+      target.kind === 'outlet' ? { collected: target.collected, purity: purityOf(target) } : null,
     );
   }
 

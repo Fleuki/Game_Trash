@@ -67,8 +67,22 @@ export function createDebugOverlay(element: HTMLElement): { update(stats: DebugS
   // На телефоне развёрнутая панель закрывает пол-экрана, поэтому её можно свернуть.
   let collapsed = false;
 
-  element.addEventListener('click', () => {
+  // Сама панель прозрачна для нажатий: иначе она перехватывала бы тапы по полю
+  // под собой, и в левом верхнем углу нельзя было бы ничего построить.
+  // Кликается только маленькая кнопка.
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'toggle';
+  toggle.textContent = '–';
+
+  const lines = document.createElement('pre');
+  lines.className = 'lines';
+
+  element.append(toggle, lines);
+
+  toggle.addEventListener('click', () => {
     collapsed = !collapsed;
+    toggle.textContent = collapsed ? '+' : '–';
     element.classList.toggle('is-collapsed', collapsed);
     lastUpdate = -Infinity;
   });
@@ -80,11 +94,11 @@ export function createDebugOverlay(element: HTMLElement): { update(stats: DebugS
       lastUpdate = now;
 
       if (collapsed) {
-        element.textContent = `${stats.tps.toFixed(0)} TPS · ${stats.fps.toFixed(0)} FPS · ${stats.items} предм.`;
+        lines.textContent = `${stats.tps.toFixed(0)} TPS · ${stats.fps.toFixed(0)} FPS · ${stats.items} предм.`;
         return;
       }
 
-      element.textContent = [
+      lines.textContent = [
         pad('тик', String(stats.tick)),
         pad('TPS', stats.tps.toFixed(1)),
         pad('FPS', stats.fps.toFixed(1)),

@@ -1,7 +1,6 @@
 import { BELT_SPEED_DEFAULT } from '../config/balance';
 import { GRID_HEIGHT, GRID_WIDTH } from '../config/grid';
 import { DIR_RIGHT } from './grid';
-import { MATERIAL_IDS } from '../config/materials';
 import type { MaterialId } from '../config/materials';
 import type { Cell, WorldState } from './types';
 
@@ -16,6 +15,7 @@ export function createWorld(seed: number): WorldState {
       filter: [],
       machine: null,
       cooldown: 0,
+      altOut: false,
       collected: emptyCollected(),
     };
   }
@@ -30,11 +30,6 @@ export function createWorld(seed: number): WorldState {
     rngState: seed | 0,
     revision: 0,
   };
-}
-
-/** Материалы, которые развилка пропускает прямо по умолчанию: все. */
-export function defaultFilter(): typeof MATERIAL_IDS[number][] {
-  return [...MATERIAL_IDS];
 }
 
 /** Пустой счётчик принятого: нули по всем материалам. */

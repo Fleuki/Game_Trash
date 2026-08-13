@@ -109,7 +109,9 @@ export function createBeltLayer(): BeltLayer {
             drawBelt(built, cx, cy, cell.dir, body, COLOR_BELT_ARROW, 1);
             // У развилки два выхода, и оба должны быть видны без открытия панели.
             if (cell.kind === 'splitter' || cell.kind === 'sorter') {
-              drawArrow(built, cx, cy, sideDirection(cell.dir), COLOR_BELT_ARROW, 0.75);
+              // У делителя выходы равнозначны, у машины боковой — это отсев.
+              const sideAlpha = cell.kind === 'splitter' ? 1 : 0.75;
+              drawArrow(built, cx, cy, sideDirection(cell.dir), COLOR_BELT_ARROW, sideAlpha);
             }
           }
         }

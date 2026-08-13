@@ -2,7 +2,7 @@ import type { Command } from '../commands/types';
 import { cellIndex, inBounds } from './grid';
 import { defaultMachineFilter } from '../config/machines';
 import { MATERIAL_IDS } from '../config/materials';
-import { defaultFilter, emptyCollected } from './world';
+import { emptyCollected } from './world';
 import { transport } from './systems/transport';
 import type { WorldState } from './types';
 
@@ -55,9 +55,9 @@ function applyCommand(world: WorldState, command: Command): void {
     case 'PLACE_SPLITTER':
       cell.kind = 'splitter';
       cell.dir = command.dir;
-      // Свежая развилка пропускает всё прямо: пока её не настроили, она ведёт
-      // себя как обычная лента и ничего не делает исподтишка.
-      cell.filter = defaultFilter();
+      // Развилка материалов не различает: опознавать их умеют только машины.
+      cell.filter = [];
+      cell.altOut = false;
       world.revision++;
       break;
 
@@ -72,7 +72,7 @@ function applyCommand(world: WorldState, command: Command): void {
       break;
 
     case 'SET_FILTER':
-      if (cell.kind !== 'splitter' && cell.kind !== 'sorter' && cell.kind !== 'outlet') return;
+      if (cell.kind !== 'sorter' && cell.kind !== 'outlet') return;
       cell.filter = [...command.filter];
       world.revision++;
       break;
