@@ -1,0 +1,27 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #1b1b1a;
+}
+
+#stage canvas {
+  display: block;
+}
+
+#debug-overlay {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  margin: 0;
+  padding: 10px 14px;
+  font: 12px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color: #d8d4c8;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(216, 212, 200, 0.15);
+  border-radius: 4px;
+  white-space: pre;
+  pointer-events: none;
+  user-select: none;
+}
