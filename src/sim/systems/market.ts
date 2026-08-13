@@ -7,6 +7,8 @@ import {
 } from '../../config/districts';
 import { BASE_MATERIAL_IDS, MATERIAL_IDS, NEWCOMER_IDS, type MaterialId } from '../../config/materials';
 import { newcomerShare } from '../../config/newcomers';
+import { marketOfferLimit, TUTORIAL_DISTRICT } from '../../config/tutorial';
+import { allowedMaterials } from '../tutorial';
 import { nextFloat, nextInt } from '../rng';
 import type { Offer, WorldState } from '../types';
 
@@ -47,6 +49,28 @@ function mixNewcomers(composition: Record<MaterialId, number>, day: number): Rec
   return mixed;
 }
 
+/**
+ * Оставить в составе только то, что уже приезжает, и пересчитать доли.
+ *
+ * Первые дни поток узкий — GDD §13. Район остаётся собой, просто половина
+ * его содержимого ещё не появилась в городе.
+ */
+function keepUnlocked(composition: Record<MaterialId, number>, day: number): Record<MaterialId, number> {
+  const allowed = allowedMaterials(day);
+  let total = 0;
+  for (const id of allowed) total += composition[id];
+  // Район целиком из ещё не открытых фракций: возить нечего, кроме ПЭТ.
+  if (total <= 0) {
+    const only = emptyComposition();
+    only.pet = 1;
+    return only;
+  }
+
+  const kept = emptyComposition();
+  for (const id of allowed) kept[id] = composition[id] / total;
+  return kept;
+}
+
 function makeOffer(world: WorldState, district: DistrictId): Offer {
   const info = DISTRICTS[district];
   const [min, max] = info.volume;
@@ -54,7 +78,7 @@ function makeOffer(world: WorldState, district: DistrictId): Offer {
     district,
     volume: min + nextInt(world, max - min + 1),
     composition: mixNewcomers(
-      info.composition ? { ...info.composition } : lotteryComposition(world),
+      keepUnlocked(info.composition ? { ...info.composition } : lotteryComposition(world), world.day),
       world.day,
     ),
   };
@@ -79,7 +103,17 @@ export function generateMarket(world: WorldState): void {
     pool[j] = a;
   }
 
-  const count = OFFERS_MIN + nextInt(world, OFFERS_MAX - OFFERS_MIN + 1);
+  const limit = marketOfferLimit(world.day);
+  const rolled = OFFERS_MIN + nextInt(world, OFFERS_MAX - OFFERS_MIN + 1);
+  const count = limit === null ? rolled : Math.min(rolled, limit);
+
+  // Единственная партия туториала не разыгрывается: первый урок должен быть
+  // одинаковым у всех — GDD §13.
+  if (count === 1) {
+    world.market = [makeOffer(world, TUTORIAL_DISTRICT)];
+    world.batch = null;
+    return;
+  }
   const offers: Offer[] = [];
   for (let i = 0; i < count; i++) {
     const district = pool[i];

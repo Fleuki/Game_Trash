@@ -26,6 +26,8 @@ export interface CellPanel {
     accuracy: number,
     /** Для источника: копает ли он кучу, и сколько в ней осталось. */
     inlet: { fromPile: boolean; pile: number } | null,
+    /** Фракции, которые уже приезжают в потоке — GDD §13. */
+    available: readonly MaterialId[],
   ): void;
   /** Обновить состав партии, пока панель открыта. */
   refresh(stats: OutletStats): void;
@@ -186,6 +188,7 @@ export function createCellPanel(
       outletStats: OutletStats | null,
       accuracy: number,
       inlet: { fromPile: boolean; pile: number } | null,
+      available: readonly MaterialId[],
     ): void {
       current = cell;
       selected = new Set(filter);
@@ -195,10 +198,13 @@ export function createCellPanel(
       rows.hidden = isInlet;
       quick.hidden = isInlet;
       // Магниту предлагать нечего, кроме металла: прячем неподходящее.
+      // Фракции, которых ещё нет в городе, тоже прячем: настраивать линию под
+      // то, что приедет через две недели, — не выбор, а загадка.
       for (const button of quick.children) {
         const material = (button as HTMLElement).dataset.material as MaterialId;
         const info = machine ? MACHINES[machine] : null;
-        (button as HTMLElement).hidden = Boolean(info?.handles && !info.handles.includes(material));
+        const unsuitable = Boolean(info?.handles && !info.handles.includes(material));
+        (button as HTMLElement).hidden = unsuitable || !available.includes(material);
       }
       source.hidden = !isInlet;
       if (isInlet && inlet) {
@@ -243,6 +249,10 @@ export function createCellPanel(
         const canHandle = !info?.handles || info.handles.includes(material);
         input.disabled = !canHandle;
         input.parentElement?.classList.toggle('is-disabled', !canHandle);
+        // Ещё не приехавшее прячем целиком, но отмеченное оставляем видимым:
+        // иначе игрок не поймёт, откуда в приёмнике взялась фракция.
+        const row = input.parentElement as HTMLElement | null;
+        if (row) row.hidden = !available.includes(material) && !selected.has(material);
       }
       element.hidden = false;
     },

@@ -2,12 +2,12 @@ import type { Command } from '../commands/types';
 import { buildCost, crafterCost, refundFor, valueOf } from './economy';
 import { cellIndex, inBounds, isBuildable } from './grid';
 import { defaultMachineFilter } from '../config/machines';
-import { MATERIAL_IDS } from '../config/materials';
 import { emptyCollected } from './world';
 import { advancePhase, dayCycle } from './systems/dayCycle';
 import { selectOffer } from './systems/market';
 import { applyShipment, takeContract } from './systems/contracts';
 import { disposeWaste, isUnderPile } from './pile';
+import { allowedMaterials, isBuildUnlocked, isPlotUnlocked } from './tutorial';
 import { DISPOSAL_COST_PER_UNIT } from '../config/waste';
 import { PLOT_COST, PLOT_COUNT } from '../config/plots';
 import { FREE_MODE_MONEY } from '../config/certification';
@@ -53,6 +53,7 @@ function applyCommand(world: WorldState, command: Command): void {
   }
 
   if (command.type === 'BUY_PLOT') {
+    if (!isPlotUnlocked(world.day)) return;
     if (world.plots >= PLOT_COUNT || world.money < PLOT_COST) return;
     world.money -= PLOT_COST;
     world.today.spent += PLOT_COST;
@@ -140,6 +141,14 @@ function applyCommand(world: WorldState, command: Command): void {
                 : command.type === 'PLACE_CRAFTER'
                   ? 'crafter'
                   : 'sorter';
+
+    // Ещё не открытое не строится, даже если команда пришла мимо панели —
+    // GDD §13. Проверка здесь, а не в интерфейсе: правило одно на всех, а
+    // панель — только его отражение. У сортировщика и станка открывается
+    // конкретная машина, у прочего — сама клетка.
+    if (kind !== 'sorter' && kind !== 'crafter' && !isBuildUnlocked(kind, world.day)) return;
+    if (machine && !isBuildUnlocked(machine, world.day)) return;
+    if (crafter && !isBuildUnlocked(crafter, world.day)) return;
 
     // Повторная постройка того же самого ничего не меняет и денег не стоит.
     const same = cell.kind === kind && cell.machine === machine && cell.crafter === crafter;
@@ -258,7 +267,9 @@ function applyCommand(world: WorldState, command: Command): void {
       cell.dir = command.dir;
       cell.machine = command.machine;
       // По умолчанию машина пропускает прямо всё, что умеет выбирать.
-      cell.filter = defaultMachineFilter(command.machine, MATERIAL_IDS);
+      // Настраивать машину под фракцию, которой ещё нет в городе, нельзя:
+      // по умолчанию она берёт всё, что уже приезжает — GDD §13.
+      cell.filter = defaultMachineFilter(command.machine, allowedMaterials(world.day));
       cell.cooldown = 0;
       world.revision++;
       break;

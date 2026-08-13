@@ -2,6 +2,7 @@ import { BUILD_COST, MACHINE_COST, REFUND_RATE } from '../config/economy';
 import { DISPOSAL_COST_PER_UNIT } from '../config/waste';
 import { CRAFTERS } from '../config/crafters';
 import { MACHINES } from '../config/machines';
+import { BUILD_UNLOCK_DAY, type BuildableKind } from '../config/tutorial';
 import type { BuildMode } from './buildTool';
 
 interface ToolbarButton {
@@ -11,6 +12,19 @@ interface ToolbarButton {
   hint: string;
   /** Сортировщики выделяются: у них общая повадка и общий смысл. */
   machine?: boolean;
+}
+
+/**
+ * Режимы, которые можно построить, открываются по расписанию — GDD §13.
+ * «Рука», «Перенос» и «Снос» не строят ничего и доступны всегда.
+ */
+const UNLOCKABLE: readonly BuildMode[] = [
+  'belt', 'inlet', 'outlet', 'waste', 'splitter',
+  'manual', 'magnet', 'optical', 'press', 'composter', 'extruder',
+];
+
+function unlockOf(mode: BuildMode): BuildableKind | null {
+  return UNLOCKABLE.includes(mode) ? (mode as BuildableKind) : null;
 }
 
 const BUTTONS: readonly ToolbarButton[] = [
@@ -94,6 +108,15 @@ const BUTTONS: readonly ToolbarButton[] = [
 
 export interface Toolbar {
   setMode(mode: BuildMode): void;
+  /** Перерисовать замки: что открыто, зависит от дня. */
+  setDay(day: number): void;
+  /** Открыт ли режим сегодня. Нужно вводу: по горячей клавише тоже нельзя. */
+  isUnlocked(mode: BuildMode): boolean;
+  /**
+   * Сказать, почему режим не взялся. Молчаливый отказ хуже запрета: игрок
+   * жмёт «3», видит прежний инструмент и строит лентой то, что хотел оптикой.
+   */
+  explainLocked(mode: BuildMode): void;
 }
 
 /**
@@ -109,6 +132,8 @@ export function createToolbar(
 ): Toolbar {
   const buttons = new Map<BuildMode, HTMLButtonElement>();
   const hints = new Map<BuildMode, string>();
+  let day = 1;
+  let current: BuildMode = 'belt';
 
   for (const item of BUTTONS) {
     const button = document.createElement('button');
@@ -121,12 +146,53 @@ export function createToolbar(
     hints.set(item.mode, item.hint);
   }
 
+  const unlockedAt = (mode: BuildMode): number => {
+    const kind = unlockOf(mode);
+    return kind ? BUILD_UNLOCK_DAY[kind] : 1;
+  };
+  const unlocked = (mode: BuildMode): boolean => day >= unlockedAt(mode);
+
+  /**
+   * Подсказка закрытого режима говорит только когда он откроется. Расписывать
+   * машину, которую нельзя поставить ещё восемь дней, — впустую занимать
+   * единственную строку подсказки.
+   */
+  const showHint = (mode: BuildMode): void => {
+    hintElement.textContent = unlocked(mode)
+      ? (hints.get(mode) ?? '')
+      : `Откроется на ${unlockedAt(mode)}-й день.`;
+  };
+
+  const paint = (): void => {
+    for (const [mode, button] of buttons) {
+      const open = unlocked(mode);
+      button.disabled = !open;
+      button.classList.toggle('is-locked', !open);
+      button.title = open ? '' : `Откроется на ${unlockedAt(mode)}-й день`;
+    }
+  };
+  paint();
+
   return {
     setMode(mode: BuildMode): void {
+      current = mode;
       for (const [buttonMode, button] of buttons) {
         button.classList.toggle('is-active', buttonMode === mode);
       }
-      hintElement.textContent = hints.get(mode) ?? '';
+      showHint(mode);
+    },
+
+    setDay(next: number): void {
+      if (next === day) return;
+      day = next;
+      paint();
+      showHint(current);
+    },
+
+    isUnlocked: unlocked,
+
+    explainLocked(mode: BuildMode): void {
+      hintElement.textContent = `Откроется на ${unlockedAt(mode)}-й день.`;
     },
   };
 }

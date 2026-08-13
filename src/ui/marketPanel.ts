@@ -2,6 +2,7 @@ import { DISTRICTS } from '../config/districts';
 import { MATERIALS, MATERIAL_IDS } from '../config/materials';
 import { MAX_ACTIVE_CONTRACTS } from '../config/contracts';
 import { PLOT_COST, PLOT_COUNT, PLOT_UPKEEP } from '../config/plots';
+import { contractLimit, DAY_NOTES, PLOT_UNLOCK_DAY } from '../config/tutorial';
 import type { Batch, Contract, Offer } from '../sim/types';
 
 export interface MarketPanel {
@@ -16,6 +17,8 @@ export interface MarketPanel {
     activeCount: number,
     plots: { open: number; money: number },
     freeMode: boolean,
+    /** Какой сегодня день: от него зависит и подсказка, и продажа участков. */
+    day: number,
     isMorning: boolean,
   ): void;
 }
@@ -74,11 +77,11 @@ export function createMarketPanel(
       signature = '';
     },
 
-    update(market, batch, offers, activeCount, plots, freeMode, isMorning): void {
+    update(market, batch, offers, activeCount, plots, freeMode, day, isMorning): void {
       element.hidden = !isMorning || closed;
       if (!isMorning || closed) return;
 
-      const next = `${market.map((o) => `${o.district}:${o.volume}`).join('|')}#${batch?.district ?? '-'}#${offers.map((c) => c.id).join(',')}#${activeCount}#${plots.open}#${plots.money >= PLOT_COST}#${freeMode}`;
+      const next = `${market.map((o) => `${o.district}:${o.volume}`).join('|')}#${batch?.district ?? '-'}#${offers.map((c) => c.id).join(',')}#${activeCount}#${plots.open}#${plots.money >= PLOT_COST}#${freeMode}#${day}`;
       if (next === signature) return;
       signature = next;
 
@@ -102,6 +105,16 @@ export function createMarketPanel(
 
       head.append(title, close);
       element.appendChild(head);
+
+      // Что сегодня изменилось — GDD §13. Одна строка в панели, которую игрок
+      // и так открывает каждое утро; никаких окон поверх экрана.
+      const todayNote = DAY_NOTES[day];
+      if (todayNote && !freeMode) {
+        const dayNote = document.createElement('div');
+        dayNote.className = 'day-note';
+        dayNote.textContent = todayNote;
+        element.appendChild(dayNote);
+      }
 
       const hint = document.createElement('div');
       hint.className = 'panel-hint';
@@ -142,13 +155,15 @@ export function createMarketPanel(
       board.hidden = freeMode;
       element.appendChild(board);
 
-      const full = activeCount >= MAX_ACTIVE_CONTRACTS;
+      // Первые дни заказ один, и писать «из трёх» значило бы врать — GDD §13.
+      const maxActive = Math.min(MAX_ACTIVE_CONTRACTS, contractLimit(day) ?? MAX_ACTIVE_CONTRACTS);
+      const full = activeCount >= maxActive;
       const boardHint = document.createElement('div');
       boardHint.className = 'panel-hint';
       boardHint.hidden = freeMode;
       boardHint.textContent = full
-        ? `Взято ${activeCount} из ${MAX_ACTIVE_CONTRACTS} — больше не потянуть`
-        : `Активных ${activeCount} из ${MAX_ACTIVE_CONTRACTS}`;
+        ? `Взято ${activeCount} из ${maxActive} — больше не потянуть`
+        : `Активных ${activeCount} из ${maxActive}`;
       element.appendChild(boardHint);
 
       offers.forEach((contract, index) => {
@@ -174,7 +189,9 @@ export function createMarketPanel(
         element.appendChild(card);
       });
 
-      if (plots.open < PLOT_COUNT) {
+      // Участки продаются с 12-го дня — GDD §13. До того о них не заикаемся:
+      // кнопка, которую нельзя нажать, только отвлекает от первой линии.
+      if (plots.open < PLOT_COUNT && day >= PLOT_UNLOCK_DAY) {
         const plotTitle = document.createElement('div');
         plotTitle.className = 'panel-title board-title';
         plotTitle.textContent = 'Участки';

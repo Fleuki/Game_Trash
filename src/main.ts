@@ -13,6 +13,7 @@ import { purityOf } from './sim/purity';
 import { valueOf } from './sim/economy';
 import { pileTotal } from './sim/pile';
 import { effectiveAccuracy } from './sim/sorting';
+import { allowedMaterials } from './sim/tutorial';
 import { hashWorld } from './sim/hash';
 import type { CellCoord } from './sim/types';
 import { applyCommands, step } from './sim/step';
@@ -220,6 +221,7 @@ async function main(): Promise<void> {
       target.kind === 'inlet'
         ? { fromPile: target.fromPile, pile: pileTotal(world) }
         : null,
+      allowedMaterials(world.day),
     );
   }
 
@@ -311,7 +313,10 @@ async function main(): Promise<void> {
       KeyM: 'move',
     };
     const picked = byKey[event.code];
-    if (picked) {
+    if (picked && !toolbar.isUnlocked(picked)) {
+      // Инструмент не взялся — говорим об этом, а прежний оставляем как был.
+      toolbar.explainLocked(picked);
+    } else if (picked) {
       mode = picked;
       toolbar.setMode(mode);
       if (mode !== 'hand') cellPanel.close();
@@ -426,6 +431,7 @@ async function main(): Promise<void> {
       world.contracts.filter((contract) => contract.status === 'active').length,
       { open: world.plots, money: world.money },
       world.freeMode,
+      world.day,
       world.phase === 'morning',
     );
     contractsPanel.update(world.contracts, world.day);
@@ -447,6 +453,8 @@ async function main(): Promise<void> {
     );
 
     certificatePanel.update(world.certificate, world.freeMode);
+
+    toolbar.setDay(world.day);
 
     dayBar.update({
       day: world.day,

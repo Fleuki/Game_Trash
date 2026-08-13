@@ -12,20 +12,20 @@ import {
   REPUTATION_REWARD_STEP,
 } from '../../config/contracts';
 import { MATERIAL_PRICE } from '../../config/economy';
-import { MATERIAL_IDS, NEWCOMER_IDS, type MaterialId } from '../../config/materials';
-import { NEWCOMER_DAY } from '../../config/newcomers';
+import type { MaterialId } from '../../config/materials';
+import { contractLimit } from '../../config/tutorial';
+import { allowedMaterials } from '../tutorial';
 import { nextFloat, nextInt } from '../rng';
 import type { Contract, ContractItem, WorldState } from '../types';
 
 /**
  * Материалы, которые вообще имеет смысл заказывать: за органику не платят,
- * а новичков нельзя просить раньше, чем они появятся в потоке — иначе заказ
- * невыполним по условиям самой игры.
+ * а того, что ещё не приезжает в потоке, нельзя просить вовсе — иначе заказ
+ * невыполним по условиям самой игры. Это касается и новичков с 20-го дня, и
+ * стекла с алюминием, которых до второго района в городе нет.
  */
 function orderable(day: number): readonly MaterialId[] {
-  return MATERIAL_IDS.filter(
-    (id) => MATERIAL_PRICE[id] > 0 && (!NEWCOMER_IDS.includes(id) || day >= NEWCOMER_DAY),
-  );
+  return allowedMaterials(day).filter((id) => MATERIAL_PRICE[id] > 0);
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -84,13 +84,18 @@ function makeContract(world: WorldState): Contract {
 /** Свежая доска заказов на утро. Взятые контракты остаются, доска обновляется. */
 export function generateContractOffers(world: WorldState): void {
   world.contractOffers = [];
-  for (let i = 0; i < CONTRACT_OFFERS; i++) world.contractOffers.push(makeContract(world));
+  // Первые дни заказ один: GDD §13. Выбор из трёх — это уже задача, а в
+  // первые дни задача ровно одна, довезти партию до приёмника.
+  const limit = contractLimit(world.day);
+  const count = limit === null ? CONTRACT_OFFERS : Math.min(CONTRACT_OFFERS, limit);
+  for (let i = 0; i < count; i++) world.contractOffers.push(makeContract(world));
 }
 
 export function takeContract(world: WorldState, index: number): void {
   if (world.phase !== 'morning') return;
   const active = world.contracts.filter((contract) => contract.status === 'active');
-  if (active.length >= MAX_ACTIVE_CONTRACTS) return;
+  const allowed = contractLimit(world.day) ?? MAX_ACTIVE_CONTRACTS;
+  if (active.length >= Math.min(MAX_ACTIVE_CONTRACTS, allowed)) return;
 
   const offer = world.contractOffers[index];
   if (!offer) return;

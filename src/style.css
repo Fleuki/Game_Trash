@@ -657,3 +657,24 @@ body {
 #daybar .day-countdown[hidden] {
   display: none;
 }
+
+/* Закрытая кнопка видна, но не нажимается: игрок должен знать, что ещё будет. */
+#toolbar button.is-locked {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Что сегодня изменилось. Строка над рынком, а не окно поверх экрана. */
+#market .day-note {
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  line-height: 1.45;
+  color: #e8e2cf;
+  background: rgba(111, 154, 92, 0.18);
+  border-left: 3px solid #6f9a5c;
+  border-radius: 3px;
+}
+
+#market .day-note[hidden] {
+  display: none;
+}
