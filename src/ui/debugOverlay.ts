@@ -64,12 +64,25 @@ function formatCell(cell: CellCoord | null): string {
  */
 export function createDebugOverlay(element: HTMLElement): { update(stats: DebugStats): void } {
   let lastUpdate = -Infinity;
+  // На телефоне развёрнутая панель закрывает пол-экрана, поэтому её можно свернуть.
+  let collapsed = false;
+
+  element.addEventListener('click', () => {
+    collapsed = !collapsed;
+    element.classList.toggle('is-collapsed', collapsed);
+    lastUpdate = -Infinity;
+  });
 
   return {
     update(stats: DebugStats): void {
       const now = performance.now();
       if (now - lastUpdate < UPDATE_INTERVAL_MS) return;
       lastUpdate = now;
+
+      if (collapsed) {
+        element.textContent = `${stats.tps.toFixed(0)} TPS · ${stats.fps.toFixed(0)} FPS · ${stats.items} предм.`;
+        return;
+      }
 
       element.textContent = [
         pad('тик', String(stats.tick)),

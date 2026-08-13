@@ -31,7 +31,8 @@ async function main(): Promise<void> {
   const overlayElement = document.querySelector<HTMLElement>('#debug-overlay');
   const toolbarElement = document.querySelector<HTMLElement>('#toolbar');
   const panelElement = document.querySelector<HTMLElement>('#panel');
-  if (!stage || !overlayElement || !toolbarElement || !panelElement) {
+  const hintElement = document.querySelector<HTMLElement>('#hint');
+  if (!stage || !overlayElement || !toolbarElement || !panelElement || !hintElement) {
     throw new Error('Разметка неполная');
   }
 
@@ -56,7 +57,7 @@ async function main(): Promise<void> {
   let spaceHeld = false;
   let beltCount = 0;
 
-  const toolbar = createToolbar(toolbarElement, (picked) => {
+  const toolbar = createToolbar(toolbarElement, hintElement, (picked) => {
     mode = picked;
     toolbar.setMode(mode);
   });
