@@ -81,6 +81,8 @@ async function main(): Promise<void> {
   let lastTap: CellCoord | null = null;
   /** Тащим камеру: режим «рука», средняя кнопка или зажатый пробел. */
   let panning = false;
+  /** Что взято на перенос: null — ничего не берём. */
+  let carried: CellCoord | null = null;
   let spaceHeld = false;
   let beltCount = 0;
   /** Сколько шагов симуляции делается за один шаг реального времени. 0 — пауза. */
@@ -163,6 +165,25 @@ async function main(): Promise<void> {
     return cellAtScreen(camera, point.x, point.y, size.width, size.height);
   }
 
+  /**
+   * Перенос в два тапа: взять построенное, поставить на свободное. На телефоне
+   * это надёжнее перетаскивания, которое там занято панорамированием.
+   */
+  function handleMoveTap(cell: CellCoord | null): void {
+    if (mode !== 'move' || !cell) return;
+    const target = world.cells[cellIndex(cell.cx, cell.cy)];
+    if (!target) return;
+
+    if (!carried) {
+      if (target.kind === 'empty') return;
+      carried = cell;
+      return;
+    }
+
+    commands.push({ type: 'MOVE_CELL', cx: carried.cx, cy: carried.cy, toCx: cell.cx, toCy: cell.cy });
+    carried = null;
+  }
+
   /** Тап по настраиваемой клетке в режиме «рука» открывает её панель. */
   function openPanelAt(cell: CellCoord | null): void {
     if (mode !== 'hand' || !cell) return;
@@ -199,7 +220,7 @@ async function main(): Promise<void> {
     onDragStart(point, kind: DragKind) {
       // Средняя кнопка и пробел двигают поле всегда, в любом режиме:
       // иначе в режиме стройки некуда деться.
-      if (kind === 'auxiliary' || spaceHeld || mode === 'hand') {
+      if (kind === 'auxiliary' || spaceHeld || mode === 'hand' || mode === 'move') {
         panning = true;
         return;
       }
@@ -227,6 +248,7 @@ async function main(): Promise<void> {
       if (wasTap) {
         lastTap = cellAt(point);
         openPanelAt(lastTap);
+        handleMoveTap(lastTap);
       }
 
       if (wasPanning) return;
@@ -263,6 +285,7 @@ async function main(): Promise<void> {
     if (event.code === 'Escape') {
       buildTool.cancel();
       cellPanel.close();
+      carried = null;
     }
     const byKey: Record<string, BuildMode> = {
       KeyB: 'belt',
@@ -278,12 +301,14 @@ async function main(): Promise<void> {
       Digit6: 'extruder',
       KeyE: 'erase',
       KeyH: 'hand',
+      KeyM: 'move',
     };
     const picked = byKey[event.code];
     if (picked) {
       mode = picked;
       toolbar.setMode(mode);
       if (mode !== 'hand') cellPanel.close();
+      if (mode !== 'move') carried = null;
     }
   });
   document.addEventListener('keyup', (event: KeyboardEvent) => {
@@ -425,7 +450,7 @@ async function main(): Promise<void> {
     const itemCount = renderer.render({
       world,
       camera,
-      hover,
+      hover: carried ?? hover,
       ghost: buildTool.preview,
       ghostAction: buildTool.action,
       alpha: accumulator / STEP,

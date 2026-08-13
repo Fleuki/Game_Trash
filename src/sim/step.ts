@@ -48,6 +48,48 @@ function applyCommand(world: WorldState, command: Command): void {
     return;
   }
 
+  if (command.type === 'MOVE_CELL') {
+    // Перенос — это снятие модуля и установка его на новое место, а не покупка:
+    // денег он не стоит. GDD §10: нельзя наказывать за хорошо сделанную работу.
+    const fromIndex = cellIndex(command.cx, command.cy);
+    const toIndex = cellIndex(command.toCx, command.toCy);
+    if (fromIndex === toIndex) return;
+
+    const source = world.cells[fromIndex];
+    const target = world.cells[toIndex];
+    if (!source || !target || source.kind === 'empty' || target.kind !== 'empty') return;
+    if (!isBuildable(command.toCx, world.plots)) return;
+    if (isUnderPile(world, toIndex)) return;
+
+    target.kind = source.kind;
+    target.dir = source.dir;
+    target.machine = source.machine;
+    target.crafter = source.crafter;
+    target.filter = [...source.filter];
+    target.fromPile = source.fromPile;
+    target.altOut = source.altOut;
+    target.cooldown = source.cooldown;
+    target.collected = { ...source.collected };
+    target.broken = source.broken;
+    target.value = source.value;
+    // Предметы едут вместе с клеткой: они уже оплачены и никуда не пропадают.
+    target.items = source.items;
+
+    source.kind = 'empty';
+    source.machine = null;
+    source.crafter = null;
+    source.filter = [];
+    source.fromPile = false;
+    source.cooldown = 0;
+    source.collected = emptyCollected();
+    source.broken = 0;
+    source.value = 0;
+    source.items = [];
+
+    world.revision++;
+    return;
+  }
+
   if (command.type === 'DISPOSE_WASTE') {
     disposeWaste(world, command.units, DISPOSAL_COST_PER_UNIT);
     return;

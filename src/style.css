@@ -555,3 +555,27 @@ body {
     width: 110px;
   }
 }
+
+#panel .panel-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+#panel .panel-quick button {
+  flex: 1 1 auto;
+  width: auto;
+  min-height: 32px;
+  padding: 0 8px;
+  font: 11px/1 ui-monospace, Menlo, Consolas, monospace;
+  color: #d8d4c8;
+  background: rgba(216, 212, 200, 0.1);
+  border: 1px solid rgba(216, 212, 200, 0.2);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+#panel .panel-quick button[hidden] {
+  display: none;
+}

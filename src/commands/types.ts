@@ -61,6 +61,15 @@ export interface SetInletSourceCommand {
   fromPile: boolean;
 }
 
+/** Перенести построенное на другую клетку. Бесплатно: это не покупка. */
+export interface MoveCellCommand {
+  type: 'MOVE_CELL';
+  cx: number;
+  cy: number;
+  toCx: number;
+  toCy: number;
+}
+
 /** Открыть следующий участок. */
 export interface BuyPlotCommand {
   type: 'BUY_PLOT';
@@ -135,6 +144,7 @@ export type Command =
   | DisposeWasteCommand
   | SetInletSourceCommand
   | BuyPlotCommand
+  | MoveCellCommand
   | SetFilterCommand
   | ShipOutletCommand
   | RemoveCellCommand

@@ -49,6 +49,7 @@ const MODE_LABEL: Record<BuildMode, string> = {
   composter: 'компостер',
   extruder: 'экструдер',
   erase: 'снос',
+  move: 'перенос',
   hand: 'рука',
 };
 

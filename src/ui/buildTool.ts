@@ -15,10 +15,11 @@ export type BuildMode =
   | MachineKind
   | CraftKind
   | 'erase'
+  | 'move'
   | 'hand';
 
 /** Что кладёт текущая протяжка. Режим «рука» до инструмента не доходит. */
-export type BuildAction = Exclude<BuildMode, 'hand'>;
+export type BuildAction = Exclude<BuildMode, 'hand' | 'move'>;
 
 export interface BuildTool {
   /** Идёт ли протяжка прямо сейчас. */

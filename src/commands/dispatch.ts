@@ -25,6 +25,9 @@ function isValid(command: Command): boolean {
     case 'PLACE_WASTE':
     case 'PLACE_CRAFTER':
     case 'SET_INLET_SOURCE':
+      return inBounds(command.cx, command.cy);
+    case 'MOVE_CELL':
+      return inBounds(command.cx, command.cy) && inBounds(command.toCx, command.toCy);
     case 'SHIP_OUTLET':
     case 'REMOVE_CELL':
       return inBounds(command.cx, command.cy);

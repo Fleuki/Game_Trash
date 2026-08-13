@@ -55,6 +55,11 @@ export function createCellPanel(
   const title = document.createElement('div');
   title.className = 'panel-title';
 
+  // Быстрая настройка: одна кнопка вместо четырёх переключателей. Ради этого
+  // весь срез и затевался — перенастройка линии должна занимать секунды.
+  const quick = document.createElement('div');
+  quick.className = 'panel-quick';
+
   const rows = document.createElement('div');
   rows.className = 'panel-rows';
 
@@ -87,8 +92,21 @@ export function createCellPanel(
   close.textContent = 'Закрыть';
   close.addEventListener('click', () => panel.close());
 
-  element.append(title, specs, rows, hint, stats, source, reset, close);
+  element.append(title, specs, quick, rows, hint, stats, source, reset, close);
   element.hidden = true;
+
+  for (const material of MATERIAL_IDS) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.material = material;
+    button.textContent = MATERIALS[material].label;
+    button.addEventListener('click', () => {
+      selected = new Set([material]);
+      for (const [id, box] of checkboxes) box.checked = id === material;
+      if (current) onChange(current, [...selected]);
+    });
+    quick.appendChild(button);
+  }
 
   const checkboxes = new Map<MaterialId, HTMLInputElement>();
   for (const material of MATERIAL_IDS) {
@@ -175,6 +193,13 @@ export function createCellPanel(
 
       const isInlet = kind === 'inlet';
       rows.hidden = isInlet;
+      quick.hidden = isInlet;
+      // Магниту предлагать нечего, кроме металла: прячем неподходящее.
+      for (const button of quick.children) {
+        const material = (button as HTMLElement).dataset.material as MaterialId;
+        const info = machine ? MACHINES[machine] : null;
+        (button as HTMLElement).hidden = Boolean(info?.handles && !info.handles.includes(material));
+      }
       source.hidden = !isInlet;
       if (isInlet && inlet) {
         digging = inlet.fromPile;
