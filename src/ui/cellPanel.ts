@@ -10,6 +10,8 @@ export interface OutletStats {
   /** Сколько боя в партии. Считается отдельно: это уже не стекло. */
   broken: number;
   purity: number;
+  /** Сколько дадут за партию прямо сейчас, ₽. */
+  revenue: number;
 }
 
 export interface CellPanel {
@@ -63,7 +65,7 @@ export function createCellPanel(
 
   const reset = document.createElement('button');
   reset.type = 'button';
-  reset.textContent = 'Высыпать партию';
+  reset.textContent = 'Отгрузить';
   reset.addEventListener('click', () => {
     if (current) onReset(current);
   });
@@ -130,6 +132,8 @@ export function createCellPanel(
               ...(next.broken > 0 ? [`бой: ${next.broken}`] : []),
               `чистота ${(next.purity * 100).toFixed(1)}%`,
             ].join('\n');
+      reset.textContent = next.revenue > 0 ? `Отгрузить за ${next.revenue} ₽` : 'Отгрузить';
+      reset.disabled = total === 0;
     },
 
     open(

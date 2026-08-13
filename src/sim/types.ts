@@ -27,6 +27,26 @@ export interface Batch {
   volume: number;
 }
 
+/** Одна отгрузка: что, сколько, какой чистоты и за сколько ушло. */
+export interface Shipped {
+  material: MaterialId;
+  units: number;
+  purity: number;
+  revenue: number;
+}
+
+/** Итоги дня. Обнуляются с началом каждого дня, читаются вечером в отчёте. */
+export interface DayStats {
+  /** Сколько единиц привезла партия. */
+  arrived: number;
+  /** Сколько дошло до приёмников. */
+  processed: number;
+  shipments: Shipped[];
+  earned: number;
+  spent: number;
+  refunded: number;
+}
+
 /** Направление: куда смотрит объект. Индекс в таблицах из sim/grid.ts. */
 export type Direction = 0 | 1 | 2 | 3;
 
@@ -127,6 +147,12 @@ export interface WorldState {
 
   /** Что везём сегодня. null — партия ещё не выбрана, и день начинать рано. */
   batch: Batch | null;
+
+  /** Деньги. */
+  money: number;
+
+  /** Итоги текущего дня. */
+  today: DayStats;
 
   /**
    * Клетки площадки, построчно: индекс = cy * GRID_WIDTH + cx.

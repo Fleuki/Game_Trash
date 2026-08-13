@@ -53,9 +53,9 @@ export interface SetFilterCommand {
   filter: MaterialId[];
 }
 
-/** Высыпать накопленное приёмником и начать партию заново. */
-export interface ResetOutletCommand {
-  type: 'RESET_OUTLET';
+/** Отгрузить накопленную приёмником партию и получить за неё деньги. */
+export interface ShipOutletCommand {
+  type: 'SHIP_OUTLET';
   cx: number;
   cy: number;
 }
@@ -90,7 +90,7 @@ export type Command =
   | PlaceSplitterCommand
   | PlaceSorterCommand
   | SetFilterCommand
-  | ResetOutletCommand
+  | ShipOutletCommand
   | RemoveCellCommand
   | SetBeltSpeedCommand
   | AdvancePhaseCommand

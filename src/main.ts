@@ -10,14 +10,16 @@ import {
 } from './render/camera';
 import { cellIndex } from './sim/grid';
 import { purityOf } from './sim/purity';
+import { valueOf } from './sim/economy';
 import { effectiveAccuracy } from './sim/sorting';
 import { hashWorld } from './sim/hash';
 import type { CellCoord } from './sim/types';
-import { step } from './sim/step';
+import { applyCommands, step } from './sim/step';
 import { createWorld } from './sim/world';
 import { createBuildTool, type BuildAction, type BuildMode } from './ui/buildTool';
 import { createDayBar } from './ui/dayBar';
 import { createMarketPanel } from './ui/marketPanel';
+import { createReportPanel } from './ui/reportPanel';
 import { createDebugOverlay } from './ui/debugOverlay';
 import { attachPointerInput, type DragKind, type ScreenPoint } from './ui/pointer';
 import { createSpeedSlider } from './ui/speedSlider';
@@ -38,6 +40,7 @@ async function main(): Promise<void> {
   const hintElement = document.querySelector<HTMLElement>('#hint');
   const dayBarElement = document.querySelector<HTMLElement>('#daybar');
   const marketElement = document.querySelector<HTMLElement>('#market');
+  const reportElement = document.querySelector<HTMLElement>('#report');
   if (
     !stage ||
     !overlayElement ||
@@ -45,7 +48,8 @@ async function main(): Promise<void> {
     !panelElement ||
     !hintElement ||
     !dayBarElement ||
-    !marketElement
+    !marketElement ||
+    !reportElement
   ) {
     throw new Error('Разметка неполная');
   }
@@ -95,13 +99,15 @@ async function main(): Promise<void> {
     commands.push({ type: 'SELECT_OFFER', index });
   });
 
+  const reportPanel = createReportPanel(reportElement);
+
   const cellPanel = createCellPanel(
     panelElement,
     (cell, filter) => {
       commands.push({ type: 'SET_FILTER', cx: cell.cx, cy: cell.cy, filter });
     },
     (cell) => {
-      commands.push({ type: 'RESET_OUTLET', cx: cell.cx, cy: cell.cy });
+      commands.push({ type: 'SHIP_OUTLET', cx: cell.cx, cy: cell.cy });
     },
   );
 
@@ -125,7 +131,12 @@ async function main(): Promise<void> {
       target.filter,
       target.machine,
       target.kind === 'outlet'
-        ? { collected: target.collected, broken: target.broken, purity: purityOf(target) }
+        ? {
+            collected: target.collected,
+            broken: target.broken,
+            purity: purityOf(target),
+            revenue: valueOf(target)?.revenue ?? 0,
+          }
         : null,
       effectiveAccuracy(world, target),
     );
@@ -281,6 +292,10 @@ async function main(): Promise<void> {
       }
       accumulator -= STEP;
     }
+
+    // На паузе шагов нет, но команды применяются: пауза останавливает завод,
+    // а не игрока.
+    if (timeScale === 0) applyCommands(world, commands.drain());
     if (ticksThisFrame > 0) {
       stepMs = (performance.now() - simStartMs) / ticksThisFrame;
     }
@@ -303,6 +318,7 @@ async function main(): Promise<void> {
     }
 
     marketPanel.update(world.market, world.batch, world.phase === 'morning');
+    reportPanel.update(world.day, world.today, world.batch, world.money, world.phase === 'evening');
 
     dayBar.update({
       day: world.day,
@@ -310,6 +326,7 @@ async function main(): Promise<void> {
       phase: world.phase,
       dayTicks: world.dayTicks,
       speed: timeScale,
+      money: world.money,
     });
 
     const itemCount = renderer.render({
@@ -331,6 +348,7 @@ async function main(): Promise<void> {
           collected: target.collected,
           broken: target.broken,
           purity: purityOf(target),
+          revenue: valueOf(target)?.revenue ?? 0,
         });
       }
     }

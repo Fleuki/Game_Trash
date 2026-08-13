@@ -1,4 +1,5 @@
 import type { Command } from '../commands/types';
+import { buildCost, refundFor, valueOf } from './economy';
 import { cellIndex, inBounds } from './grid';
 import { defaultMachineFilter } from '../config/machines';
 import { MATERIAL_IDS } from '../config/materials';
@@ -34,6 +35,36 @@ function applyCommand(world: WorldState, command: Command): void {
   const cell = world.cells[cellIndex(command.cx, command.cy)];
   if (!cell) return;
 
+  // Постройка стоит денег. Замена того, что уже стоит, возвращает часть
+  // прежней стоимости: игрок не должен бояться передумать.
+  if (command.type === 'PLACE_BELT' || command.type === 'PLACE_INLET' ||
+      command.type === 'PLACE_OUTLET' || command.type === 'PLACE_SPLITTER' ||
+      command.type === 'PLACE_SORTER') {
+    const machine = command.type === 'PLACE_SORTER' ? command.machine : null;
+    const kind =
+      command.type === 'PLACE_BELT'
+        ? 'belt'
+        : command.type === 'PLACE_INLET'
+          ? 'inlet'
+          : command.type === 'PLACE_OUTLET'
+            ? 'outlet'
+            : command.type === 'PLACE_SPLITTER'
+              ? 'splitter'
+              : 'sorter';
+
+    // Повторная постройка того же самого ничего не меняет и денег не стоит.
+    if (cell.kind === kind && cell.machine === machine && kind !== 'belt') return;
+    if (cell.kind === kind && cell.machine === machine && cell.dir === command.dir) return;
+
+    const cost = buildCost(kind, machine);
+    const refund = refundFor(cell);
+    if (world.money + refund < cost) return;
+
+    world.money += refund - cost;
+    world.today.spent += cost;
+    world.today.refunded += refund;
+  }
+
   switch (command.type) {
     case 'PLACE_BELT':
       cell.kind = 'belt';
@@ -60,11 +91,23 @@ function applyCommand(world: WorldState, command: Command): void {
       world.revision++;
       break;
 
-    case 'RESET_OUTLET':
+    case 'SHIP_OUTLET': {
       if (cell.kind !== 'outlet') return;
+      const shipment = valueOf(cell);
+      if (!shipment) return;
+
+      world.money += shipment.revenue;
+      world.today.earned += shipment.revenue;
+      world.today.shipments.push({
+        material: shipment.material as typeof cell.filter[number],
+        units: shipment.units,
+        purity: shipment.purity,
+        revenue: shipment.revenue,
+      });
       cell.collected = emptyCollected();
       cell.broken = 0;
       break;
+    }
 
     case 'PLACE_SPLITTER':
       cell.kind = 'splitter';
@@ -91,8 +134,11 @@ function applyCommand(world: WorldState, command: Command): void {
       world.revision++;
       break;
 
-    case 'REMOVE_CELL':
+    case 'REMOVE_CELL': {
       if (cell.kind === 'empty') return;
+      const refund = refundFor(cell);
+      world.money += refund;
+      world.today.refunded += refund;
       cell.kind = 'empty';
       cell.machine = null;
       cell.cooldown = 0;
@@ -102,7 +148,19 @@ function applyCommand(world: WorldState, command: Command): void {
       cell.items.length = 0;
       world.revision++;
       break;
+    }
   }
+}
+
+/**
+ * Применить команды игрока, не двигая симуляцию.
+ *
+ * Нужно на паузе: пауза останавливает завод, а не игрока. Утро и вечер по
+ * GDD §4 существуют именно для того, чтобы строить и перенастраивать без спешки,
+ * и молча копить команды до снятия паузы — значит врать игроку.
+ */
+export function applyCommands(world: WorldState, commands: readonly Command[]): void {
+  for (const command of commands) applyCommand(world, command);
 }
 
 /**

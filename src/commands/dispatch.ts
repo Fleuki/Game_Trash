@@ -22,7 +22,7 @@ function isValid(command: Command): boolean {
     case 'PLACE_OUTLET':
     case 'PLACE_SPLITTER':
     case 'PLACE_SORTER':
-    case 'RESET_OUTLET':
+    case 'SHIP_OUTLET':
     case 'REMOVE_CELL':
       return inBounds(command.cx, command.cy);
     case 'SET_FILTER':

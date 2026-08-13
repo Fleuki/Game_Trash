@@ -21,6 +21,7 @@ export interface DayBarState {
   speed: number;
   /** Партия на сегодня выбрана. Без неё день начинать нечем. */
   hasBatch: boolean;
+  money: number;
 }
 
 export interface DayBar {
@@ -38,6 +39,9 @@ export function createDayBar(
 ): DayBar {
   const title = document.createElement('div');
   title.className = 'day-title';
+
+  const money = document.createElement('div');
+  money.className = 'day-money';
 
   const track = document.createElement('div');
   track.className = 'day-track';
@@ -63,7 +67,7 @@ export function createDayBar(
   advance.className = 'day-advance';
   advance.addEventListener('click', onAdvance);
 
-  element.append(title, track, speeds, advance);
+  element.append(title, money, track, speeds, advance);
 
   let lastLabel = '';
 
@@ -78,6 +82,7 @@ export function createDayBar(
       }
       advance.disabled = state.phase === 'morning' && !state.hasBatch;
 
+      money.textContent = `${state.money} ₽`;
       fill.style.width = `${Math.min(100, (state.dayTicks / DAY_LENGTH_TICKS) * 100)}%`;
 
       for (const [speed, button] of speedButtons) {

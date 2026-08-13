@@ -81,6 +81,7 @@ function spawn(world: WorldState): void {
     const last = cell.items[cell.items.length - 1];
     if (last && last.t < ITEM_GAP) continue;
     batch.remaining--;
+    world.today.arrived++;
     cell.items.push({
       id: world.nextItemId++,
       material: rollMaterial(world, batch.composition),
@@ -191,6 +192,7 @@ function move(world: WorldState): void {
       if (transfer.item.broken) to.broken++;
       else to.collected[transfer.item.material]++;
       world.delivered++;
+      world.today.processed++;
       continue;
     }
 

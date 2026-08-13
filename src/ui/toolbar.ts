@@ -1,3 +1,4 @@
+import { BUILD_COST, MACHINE_COST, REFUND_RATE } from '../config/economy';
 import { MACHINES } from '../config/machines';
 import type { BuildMode } from './buildTool';
 
@@ -14,45 +15,45 @@ const BUTTONS: readonly ToolbarButton[] = [
   {
     mode: 'belt',
     label: 'Лента',
-    hint: 'Лента (B). Тяни протяжкой — на изломе повернёт сама.',
+    hint: `Лента (B), ${BUILD_COST.belt} ₽ за клетку. Тяни протяжкой — на изломе повернёт сама.`,
   },
   {
     mode: 'inlet',
     label: 'Источник',
-    hint: 'Источник (I). Отсюда приезжает мусор. Забился вход — источник встаёт.',
+    hint: `Источник (I), ${BUILD_COST.inlet} ₽. Отсюда приезжает купленная партия. Забился вход — источник встаёт.`,
   },
   {
     mode: 'splitter',
     label: 'Развилка',
-    hint: 'Развилка (R). Делит поток поровну между двумя выходами и обходит забитую сторону. Материалы не различает — это работа сортировщиков.',
+    hint: `Развилка (R), ${BUILD_COST.splitter} ₽. Делит поток поровну и обходит забитую сторону. Материалы не различает — это работа сортировщиков.`,
   },
   {
     mode: 'manual',
     label: 'Стол',
-    hint: `Ручной стол (1) — сортировщик. ${MACHINES.manual.throughput} ед/с, точность ${Math.round(MACHINES.manual.accuracy * 100)}%. Медленный и ошибается, зато берёт любой материал.`,
+    hint: `Ручной стол (1) — сортировщик, ${MACHINE_COST.manual} ₽. ${MACHINES.manual.throughput} ед/с, точность ${Math.round(MACHINES.manual.accuracy * 100)}%. Медленный и ошибается, зато берёт любой материал.`,
     machine: true,
   },
   {
     mode: 'magnet',
     label: 'Магнит',
-    hint: `Магнит (2) — сортировщик. ${MACHINES.magnet.throughput} ед/с, точность ${Math.round(MACHINES.magnet.accuracy * 100)}%. Быстрый и точный, но вытаскивает только металл.`,
+    hint: `Магнит (2) — сортировщик, ${MACHINE_COST.magnet} ₽. ${MACHINES.magnet.throughput} ед/с, точность ${Math.round(MACHINES.magnet.accuracy * 100)}%. Быстрый и точный, но вытаскивает только металл.`,
     machine: true,
   },
   {
     mode: 'optical',
     label: 'Оптика',
-    hint: `Оптический (3) — сортировщик. ${MACHINES.optical.throughput} ед/с, точность ${Math.round(MACHINES.optical.accuracy * 100)}%. Берёт любой материал.`,
+    hint: `Оптический (3) — сортировщик, ${MACHINE_COST.optical} ₽. ${MACHINES.optical.throughput} ед/с, точность ${Math.round(MACHINES.optical.accuracy * 100)}%. Берёт любой материал.`,
     machine: true,
   },
   {
     mode: 'outlet',
     label: 'Приёмник',
-    hint: 'Приёмник (O). Копит фракцию и считает её чистоту. Настроить — «Рука» и тап.',
+    hint: `Приёмник (O), ${BUILD_COST.outlet} ₽. Копит фракцию, считает чистоту и отгружает за деньги. Настроить — «Рука» и тап.`,
   },
   {
     mode: 'erase',
     label: 'Снос',
-    hint: 'Снос (E). Правая кнопка мыши сносит в любом режиме.',
+    hint: `Снос (E). Возвращает ${Math.round(REFUND_RATE * 100)}% стоимости. Правая кнопка мыши сносит в любом режиме.`,
   },
   {
     mode: 'hand',

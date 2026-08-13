@@ -330,3 +330,30 @@ body {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+#daybar .day-money {
+  min-width: 70px;
+  font-weight: bold;
+  color: #b9d3a8;
+}
+
+#report {
+  position: fixed;
+  right: 12px;
+  top: 64px;
+  max-width: min(460px, calc(100vw - 24px));
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+  margin: 0;
+  padding: 12px 14px;
+  font: 12px/1.6 ui-monospace, Menlo, Consolas, monospace;
+  color: #d8d4c8;
+  white-space: pre;
+  background: rgba(0, 0, 0, 0.82);
+  border: 1px solid rgba(216, 212, 200, 0.2);
+  border-radius: 4px;
+}
+
+#report[hidden] {
+  display: none;
+}
