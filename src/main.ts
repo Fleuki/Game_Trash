@@ -11,9 +11,10 @@ import {
 import type { CellCoord } from './sim/types';
 import { step } from './sim/step';
 import { createWorld } from './sim/world';
-import { createBuildTool, type BuildMode } from './ui/buildTool';
+import { createBuildTool, type BuildAction, type BuildMode } from './ui/buildTool';
 import { createDebugOverlay } from './ui/debugOverlay';
 import { attachPointerInput, type DragKind, type ScreenPoint } from './ui/pointer';
+import { createSpeedSlider } from './ui/speedSlider';
 import { createToolbar } from './ui/toolbar';
 
 /**
@@ -38,7 +39,7 @@ async function main(): Promise<void> {
   const initialView = renderer.getViewSize();
   fitToScreen(camera, initialView.width, initialView.height);
 
-  let mode: BuildMode = 'build';
+  let mode: BuildMode = 'belt';
   let hover: CellCoord | null = null;
   let lastTap: CellCoord | null = null;
   /** Тащим камеру: режим «рука», средняя кнопка или зажатый пробел. */
@@ -51,6 +52,10 @@ async function main(): Promise<void> {
     toolbar.setMode(mode);
   });
   toolbar.setMode(mode);
+
+  createSpeedSlider(toolbarElement, world.beltSpeed, (value) => {
+    commands.push({ type: 'SET_BELT_SPEED', value });
+  });
 
   function cellAt(point: ScreenPoint): CellCoord | null {
     const size = renderer.getViewSize();
@@ -67,7 +72,9 @@ async function main(): Promise<void> {
       }
       const cell = cellAt(point);
       if (!cell) return;
-      buildTool.begin(cell, kind === 'secondary' || mode === 'erase' ? 'erase' : 'build');
+      // Правая кнопка сносит всегда, в любом режиме.
+      const action: BuildAction = kind === 'secondary' ? 'erase' : (mode as BuildAction);
+      buildTool.begin(cell, action);
     },
 
     onDragMove(point, deltaX, deltaY) {
@@ -115,7 +122,12 @@ async function main(): Promise<void> {
   document.addEventListener('keydown', (event: KeyboardEvent) => {
     if (event.code === 'Space') spaceHeld = true;
     if (event.code === 'Escape') buildTool.cancel();
-    const byKey: Record<string, BuildMode> = { KeyB: 'build', KeyE: 'erase', KeyH: 'hand' };
+    const byKey: Record<string, BuildMode> = {
+      KeyB: 'belt',
+      KeyI: 'inlet',
+      KeyE: 'erase',
+      KeyH: 'hand',
+    };
     const picked = byKey[event.code];
     if (picked) {
       mode = picked;
@@ -223,6 +235,8 @@ async function main(): Promise<void> {
       zoom: camera.zoom,
       mode,
       belts: beltCount,
+      items: world.items.length,
+      beltSpeed: world.beltSpeed,
     });
   }
 

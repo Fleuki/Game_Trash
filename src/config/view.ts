@@ -30,3 +30,5 @@ export const COLOR_CELL_HOVER = 0x6f9a5c;
 export const COLOR_BELT = 0x46433c;
 export const COLOR_BELT_ARROW = 0x938d7c;
 export const COLOR_ERASE = 0xa8524a;
+export const COLOR_INLET = 0x5c7a9a;
+export const COLOR_ITEM = 0xd9cfa6;

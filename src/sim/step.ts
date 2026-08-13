@@ -1,5 +1,6 @@
 import type { Command } from '../commands/types';
 import { cellIndex, inBounds } from './grid';
+import { transport } from './systems/transport';
 import type { WorldState } from './types';
 
 /**
@@ -8,6 +9,11 @@ import type { WorldState } from './types';
 function applyCommand(world: WorldState, command: Command): void {
   // Очередь уже отсеяла невалидное, но симуляция никому не верит на слово:
   // команда может прийти из сейва или, в будущем, по сети.
+  if (command.type === 'SET_BELT_SPEED') {
+    world.beltSpeed = command.value;
+    return;
+  }
+
   if (!inBounds(command.cx, command.cy)) return;
 
   const cell = world.cells[cellIndex(command.cx, command.cy)];
@@ -20,11 +26,21 @@ function applyCommand(world: WorldState, command: Command): void {
       world.revision++;
       break;
 
-    case 'REMOVE_CELL':
-      if (cell.kind === 'empty') return;
-      cell.kind = 'empty';
+    case 'PLACE_INLET':
+      cell.kind = 'inlet';
+      cell.dir = command.dir;
       world.revision++;
       break;
+
+    case 'REMOVE_CELL': {
+      if (cell.kind === 'empty') return;
+      cell.kind = 'empty';
+      // Предметы, стоявшие на снесённой клетке, исчезают вместе с ней.
+      const removedIndex = cellIndex(command.cx, command.cy);
+      world.items = world.items.filter((item) => item.cell !== removedIndex);
+      world.revision++;
+      break;
+    }
   }
 }
 
@@ -36,5 +52,6 @@ function applyCommand(world: WorldState, command: Command): void {
  */
 export function step(world: WorldState, commands: readonly Command[]): void {
   for (const command of commands) applyCommand(world, command);
+  transport(world);
   world.tick++;
 }

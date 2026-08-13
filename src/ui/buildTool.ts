@@ -4,7 +4,10 @@ import type { CellCoord, CellPlacement } from '../sim/types';
 
 
 /** Что делает протяжка по полю. «Рука» ничего не строит и просто двигает камеру. */
-export type BuildMode = 'build' | 'erase' | 'hand';
+export type BuildMode = 'belt' | 'inlet' | 'erase' | 'hand';
+
+/** Что кладёт текущая протяжка. Режим «рука» до инструмента не доходит. */
+export type BuildAction = 'belt' | 'inlet' | 'erase';
 
 export interface BuildTool {
   /** Идёт ли протяжка прямо сейчас. */
@@ -12,9 +15,9 @@ export interface BuildTool {
   /** Что рисовать призраком: пусто, если протяжки нет. */
   readonly preview: readonly CellPlacement[];
   /** Строит или сносит текущая протяжка. */
-  readonly action: 'build' | 'erase';
+  readonly action: BuildAction;
 
-  begin(cell: CellCoord, action: 'build' | 'erase'): void;
+  begin(cell: CellCoord, action: BuildAction): void;
   extend(cell: CellCoord | null): void;
   /** Завершить протяжку и получить команды. Путь сбрасывается. */
   commit(): Command[];
@@ -30,7 +33,7 @@ export interface BuildTool {
  */
 export function createBuildTool(): BuildTool {
   let path: CellCoord[] = [];
-  let action: 'build' | 'erase' = 'build';
+  let action: BuildAction = 'belt';
   let active = false;
 
   function last(): CellCoord | undefined {
@@ -96,11 +99,11 @@ export function createBuildTool(): BuildTool {
       return active ? plan() : [];
     },
 
-    get action(): 'build' | 'erase' {
+    get action(): BuildAction {
       return action;
     },
 
-    begin(cell: CellCoord, nextAction: 'build' | 'erase'): void {
+    begin(cell: CellCoord, nextAction: BuildAction): void {
       action = nextAction;
       active = true;
       path = [];
@@ -126,12 +129,8 @@ export function createBuildTool(): BuildTool {
       if (action === 'erase') {
         return planned.map((cell) => ({ type: 'REMOVE_CELL', cx: cell.cx, cy: cell.cy }));
       }
-      return planned.map((cell) => ({
-        type: 'PLACE_BELT',
-        cx: cell.cx,
-        cy: cell.cy,
-        dir: cell.dir,
-      }));
+      const type = action === 'inlet' ? 'PLACE_INLET' : 'PLACE_BELT';
+      return planned.map((cell) => ({ type, cx: cell.cx, cy: cell.cy, dir: cell.dir }));
     },
 
     cancel(): void {

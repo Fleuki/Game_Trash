@@ -1,3 +1,4 @@
+import { BELT_SPEED_MAX, BELT_SPEED_MIN } from '../config/balance';
 import { inBounds } from '../sim/grid';
 import type { Command } from './types';
 
@@ -14,7 +15,18 @@ export interface CommandQueue {
 
 /** Заведомо невыполнимые команды отсеиваем здесь, чтобы симуляция не разбирала мусор. */
 function isValid(command: Command): boolean {
-  return inBounds(command.cx, command.cy);
+  switch (command.type) {
+    case 'PLACE_BELT':
+    case 'PLACE_INLET':
+    case 'REMOVE_CELL':
+      return inBounds(command.cx, command.cy);
+    case 'SET_BELT_SPEED':
+      return (
+        Number.isFinite(command.value) &&
+        command.value >= BELT_SPEED_MIN &&
+        command.value <= BELT_SPEED_MAX
+      );
+  }
 }
 
 export function createCommandQueue(): CommandQueue {

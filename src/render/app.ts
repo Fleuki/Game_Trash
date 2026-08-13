@@ -1,9 +1,11 @@
 import { Application, Container } from 'pixi.js';
 import { COLOR_BACKGROUND } from '../config/view';
 import type { CellCoord, CellPlacement, WorldState } from '../sim/types';
+import type { BuildAction } from '../ui/buildTool';
 import { createBeltLayer } from './beltLayer';
 import type { Camera } from './camera';
 import { createGridLayer } from './gridLayer';
+import { createItemLayer } from './itemLayer';
 
 /** Всё, что нужно нарисовать кадр. Рендер читает это и ничего из этого не меняет. */
 export interface Frame {
@@ -13,7 +15,7 @@ export interface Frame {
   hover: CellCoord | null;
   /** Незавершённая протяжка: то, что появится, если отпустить сейчас. */
   ghost: readonly CellPlacement[];
-  ghostAction: 'build' | 'erase';
+  ghostAction: BuildAction;
   /** Доля шага, накопленная сверх последнего тика (0..1) — для интерполяции. */
   alpha: number;
 }
@@ -47,8 +49,9 @@ export async function createRenderer(container: HTMLElement): Promise<Renderer> 
   const viewport = new Container();
   const grid = createGridLayer();
   const belts = createBeltLayer();
-  // Порядок: сетка снизу, ленты поверх неё, подсветка клетки — самой верхней.
-  viewport.addChild(grid.container, belts.container, grid.hoverContainer);
+  const items = createItemLayer();
+  // Порядок: сетка снизу, ленты, предметы на них, подсветка клетки — самой верхней.
+  viewport.addChild(grid.container, belts.container, items.container, grid.hoverContainer);
   app.stage.addChild(viewport);
 
   return {
@@ -63,6 +66,7 @@ export async function createRenderer(container: HTMLElement): Promise<Renderer> 
       grid.syncZoom(camera.zoom);
       grid.setHover(frame.hover);
       belts.sync(frame.world, frame.ghost, frame.ghostAction);
+      items.sync(frame.world, frame.alpha);
 
       viewport.scale.set(camera.zoom);
       viewport.position.set(

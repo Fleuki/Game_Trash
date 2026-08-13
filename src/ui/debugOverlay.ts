@@ -28,10 +28,15 @@ export interface DebugStats {
   mode: BuildMode;
   /** Сколько клеток занято лентой. */
   belts: number;
+  /** Предметов на лентах прямо сейчас. */
+  items: number;
+  /** Скорость ленты, клеток в секунду. */
+  beltSpeed: number;
 }
 
 const MODE_LABEL: Record<BuildMode, string> = {
-  build: 'лента',
+  belt: 'лента',
+  inlet: 'источник',
   erase: 'снос',
   hand: 'рука',
 };
@@ -73,6 +78,8 @@ export function createDebugOverlay(element: HTMLElement): { update(stats: DebugS
         pad('зум', `×${stats.zoom.toFixed(2)}`),
         pad('режим', MODE_LABEL[stats.mode]),
         pad('лент', String(stats.belts)),
+        pad('предметов', String(stats.items)),
+        pad('скорость', `${stats.beltSpeed.toFixed(1)} кл/с`),
       ].join('\n');
     },
   };

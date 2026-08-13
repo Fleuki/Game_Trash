@@ -14,10 +14,27 @@ export interface PlaceBeltCommand {
   dir: Direction;
 }
 
+export interface PlaceInletCommand {
+  type: 'PLACE_INLET';
+  cx: number;
+  cy: number;
+  dir: Direction;
+}
+
+export interface SetBeltSpeedCommand {
+  type: 'SET_BELT_SPEED';
+  /** Клеток в секунду. Границы проверяются при постановке в очередь. */
+  value: number;
+}
+
 export interface RemoveCellCommand {
   type: 'REMOVE_CELL';
   cx: number;
   cy: number;
 }
 
-export type Command = PlaceBeltCommand | RemoveCellCommand;
+export type Command =
+  | PlaceBeltCommand
+  | PlaceInletCommand
+  | RemoveCellCommand
+  | SetBeltSpeedCommand;

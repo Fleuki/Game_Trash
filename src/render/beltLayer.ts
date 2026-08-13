@@ -1,14 +1,21 @@
 import { Container, Graphics } from 'pixi.js';
 import { TILE_SIZE } from '../config/grid';
-import { COLOR_BELT, COLOR_BELT_ARROW, COLOR_CELL_HOVER, COLOR_ERASE } from '../config/view';
+import {
+  COLOR_BELT,
+  COLOR_BELT_ARROW,
+  COLOR_CELL_HOVER,
+  COLOR_ERASE,
+  COLOR_INLET,
+} from '../config/view';
 import { DIR_STEP, cellIndex } from '../sim/grid';
 import type { CellPlacement, Direction, WorldState } from '../sim/types';
+import type { BuildAction } from '../ui/buildTool';
 import { GRID_HEIGHT, GRID_WIDTH } from '../config/grid';
 
 export interface BeltLayer {
   container: Container;
   /** Перерисовать, если что-то изменилось. Дешёвая проверка, дорогая отрисовка. */
-  sync(world: WorldState, ghost: readonly CellPlacement[], ghostAction: 'build' | 'erase'): void;
+  sync(world: WorldState, ghost: readonly CellPlacement[], ghostAction: BuildAction): void;
 }
 
 /** Тело ленты и стрелка направления. Формы залитые: от зума не зависят. */
@@ -73,8 +80,9 @@ export function createBeltLayer(): BeltLayer {
         for (let cy = 0; cy < GRID_HEIGHT; cy++) {
           for (let cx = 0; cx < GRID_WIDTH; cx++) {
             const cell = world.cells[cellIndex(cx, cy)];
-            if (!cell || cell.kind !== 'belt') continue;
-            drawBelt(built, cx, cy, cell.dir, COLOR_BELT, COLOR_BELT_ARROW, 1);
+            if (!cell || cell.kind === 'empty') continue;
+            const body = cell.kind === 'inlet' ? COLOR_INLET : COLOR_BELT;
+            drawBelt(built, cx, cy, cell.dir, body, COLOR_BELT_ARROW, 1);
           }
         }
         builtRevision = world.revision;
@@ -92,7 +100,8 @@ export function createBeltLayer(): BeltLayer {
             .rect(cell.cx * TILE_SIZE, cell.cy * TILE_SIZE, TILE_SIZE, TILE_SIZE)
             .fill({ color: COLOR_ERASE, alpha: 0.45 });
         } else {
-          drawBelt(ghostGraphics, cell.cx, cell.cy, cell.dir, COLOR_CELL_HOVER, COLOR_BELT_ARROW, 0.5);
+          const body = ghostAction === 'inlet' ? COLOR_INLET : COLOR_CELL_HOVER;
+          drawBelt(ghostGraphics, cell.cx, cell.cy, cell.dir, body, COLOR_BELT_ARROW, 0.5);
         }
       }
     },

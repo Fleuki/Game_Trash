@@ -40,3 +40,19 @@ export function directionBetween(
   if (dx === 0 && dy === -1) return DIR_UP;
   return null;
 }
+
+/** Координаты клетки по её индексу. */
+export function cellCoord(index: number): { cx: number; cy: number } {
+  return { cx: index % GRID_WIDTH, cy: Math.floor(index / GRID_WIDTH) };
+}
+
+/** Индекс соседа в заданном направлении. null — за краем площадки. */
+export function neighbourIndex(index: number, dir: Direction): number | null {
+  const step = DIR_STEP[dir];
+  if (!step) return null;
+  const { cx, cy } = cellCoord(index);
+  const nx = cx + step.dx;
+  const ny = cy + step.dy;
+  if (!inBounds(nx, ny)) return null;
+  return cellIndex(nx, ny);
+}
