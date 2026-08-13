@@ -7,6 +7,8 @@ export type PanelKind = 'splitter' | 'sorter' | 'outlet';
 
 export interface OutletStats {
   collected: Record<MaterialId, number>;
+  /** Сколько боя в партии. Считается отдельно: это уже не стекло. */
+  broken: number;
   purity: number;
 }
 
@@ -18,6 +20,8 @@ export interface CellPanel {
     filter: readonly MaterialId[],
     machine: MachineKind | null,
     stats: OutletStats | null,
+    /** Точность машины при текущей скорости ленты. */
+    accuracy: number,
   ): void;
   /** Обновить состав партии, пока панель открыта. */
   refresh(stats: OutletStats): void;
@@ -114,7 +118,7 @@ export function createCellPanel(
 
     refresh(next: OutletStats): void {
       if (!current || !single) return;
-      const total = MATERIAL_IDS.reduce((sum, id) => sum + next.collected[id], 0);
+      const total = MATERIAL_IDS.reduce((sum, id) => sum + next.collected[id], 0) + next.broken;
       stats.textContent =
         total === 0
           ? 'партия пуста'
@@ -123,6 +127,7 @@ export function createCellPanel(
               ...MATERIAL_IDS.filter((id) => next.collected[id] > 0).map(
                 (id) => `${MATERIALS[id].label}: ${next.collected[id]}`,
               ),
+              ...(next.broken > 0 ? [`бой: ${next.broken}`] : []),
               `чистота ${(next.purity * 100).toFixed(1)}%`,
             ].join('\n');
     },
@@ -133,6 +138,7 @@ export function createCellPanel(
       filter: readonly MaterialId[],
       machine: MachineKind | null,
       outletStats: OutletStats | null,
+      accuracy: number,
     ): void {
       current = cell;
       selected = new Set(filter);
@@ -142,10 +148,14 @@ export function createCellPanel(
       title.textContent = single
         ? `Приёмник ${cell.cx}, ${cell.cy}`
         : `${info ? info.label : 'Развилка'} ${cell.cx}, ${cell.cy}`;
+      const paper = info ? Math.round(info.accuracy * 100) : 0;
+      const now = Math.round(accuracy * 100);
       specs.textContent = single
         ? 'копит фракцию и считает её чистоту'
         : info
-          ? `${info.throughput} ед/с, точность ${Math.round(info.accuracy * 100)}%`
+          ? // Если лента разогнана, паспортная точность уже не про эту машину.
+            `${info.throughput} ед/с, точность ${paper}%` +
+            (now < paper ? ` → ${now}% на текущей скорости` : '')
           : 'разводит поток без потерь';
       hint.textContent = single
         ? 'Органика пачкает вдвое сильнее прочих примесей'

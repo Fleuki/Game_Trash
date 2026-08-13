@@ -1,6 +1,7 @@
 import { Container, Sprite, Texture } from 'pixi.js';
 import { STEP } from '../config/balance';
 import { TILE_SIZE } from '../config/grid';
+import { COLOR_BROKEN_GLASS } from '../config/view';
 import { MATERIALS } from '../config/materials';
 import { DIR_STEP, cellCoord } from '../sim/grid';
 import { exitDirection } from '../sim/routing';
@@ -91,7 +92,8 @@ export function createItemLayer(): ItemLayer {
           const sprite = obtain(used++);
           const point = itemPosition(cell, index, item, cell.items[position - 1], world, alpha);
           sprite.position.set(point.x, point.y);
-          sprite.tint = MATERIALS[item.material].color;
+          // Бой отличается на глаз: иначе игрок не поймёт, откуда взялась примесь.
+          sprite.tint = item.broken ? COLOR_BROKEN_GLASS : MATERIALS[item.material].color;
           sprite.visible = true;
         }
       }

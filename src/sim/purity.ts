@@ -1,10 +1,10 @@
-import { IMPURITY_WEIGHT } from '../config/contamination';
+import { BROKEN_GLASS_WEIGHT, IMPURITY_WEIGHT } from '../config/contamination';
 import { MATERIAL_IDS } from '../config/materials';
 import type { Cell } from './types';
 
 /** Сколько всего единиц накопил приёмник. */
 export function collectedTotal(cell: Cell): number {
-  let total = 0;
+  let total = cell.broken;
   for (const id of MATERIAL_IDS) total += cell.collected[id];
   return total;
 }
@@ -22,7 +22,8 @@ export function purityOf(cell: Cell): number {
   if (!target) return 1;
 
   const wanted = cell.collected[target];
-  let impurity = 0;
+  // Бой — примесь в любой партии, даже в стеклянной: это уже не стекло.
+  let impurity = cell.broken * BROKEN_GLASS_WEIGHT;
   for (const id of MATERIAL_IDS) {
     if (id === target) continue;
     impurity += cell.collected[id] * IMPURITY_WEIGHT[id];

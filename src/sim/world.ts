@@ -17,6 +17,7 @@ export function createWorld(seed: number): WorldState {
       cooldown: 0,
       altOut: false,
       collected: emptyCollected(),
+      broken: 0,
     };
   }
   return {

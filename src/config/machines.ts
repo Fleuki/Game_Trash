@@ -17,6 +17,11 @@ interface MachineInfo {
   accuracy: number;
   /** Материалы, которые машина умеет выбирать. null — любые. */
   handles: MaterialId[] | null;
+  /**
+   * Насколько машина путает похожие материалы. Магнит не смотрит, а притягивает,
+   * поэтому не путает вовсе — GDD §5: «отделяется магнитом от обратного».
+   */
+  confusion: number;
   color: number;
 }
 
@@ -26,6 +31,7 @@ export const MACHINES: Record<MachineKind, MachineInfo> = {
     throughput: 2,
     accuracy: 0.85,
     handles: null,
+    confusion: 0.15,
     color: 0x6b5f4a,
   },
   magnet: {
@@ -33,6 +39,7 @@ export const MACHINES: Record<MachineKind, MachineInfo> = {
     throughput: 6,
     accuracy: 0.98,
     handles: ['aluminium'],
+    confusion: 0,
     color: 0x4a5f6b,
   },
   optical: {
@@ -40,6 +47,7 @@ export const MACHINES: Record<MachineKind, MachineInfo> = {
     throughput: 4,
     accuracy: 0.92,
     handles: null,
+    confusion: 0.06,
     color: 0x4a6b5a,
   },
 };

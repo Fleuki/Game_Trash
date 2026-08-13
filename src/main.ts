@@ -10,6 +10,7 @@ import {
 } from './render/camera';
 import { cellIndex } from './sim/grid';
 import { purityOf } from './sim/purity';
+import { effectiveAccuracy } from './sim/sorting';
 import type { CellCoord } from './sim/types';
 import { step } from './sim/step';
 import { createWorld } from './sim/world';
@@ -96,7 +97,10 @@ async function main(): Promise<void> {
       target.kind,
       target.filter,
       target.machine,
-      target.kind === 'outlet' ? { collected: target.collected, purity: purityOf(target) } : null,
+      target.kind === 'outlet'
+        ? { collected: target.collected, broken: target.broken, purity: purityOf(target) }
+        : null,
+      effectiveAccuracy(world, target),
     );
   }
 
@@ -280,7 +284,11 @@ async function main(): Promise<void> {
     if (openCell) {
       const target = world.cells[cellIndex(openCell.cx, openCell.cy)];
       if (target?.kind === 'outlet') {
-        cellPanel.refresh({ collected: target.collected, purity: purityOf(target) });
+        cellPanel.refresh({
+          collected: target.collected,
+          broken: target.broken,
+          purity: purityOf(target),
+        });
       }
     }
 

@@ -1,8 +1,9 @@
 import { ITEM_GAP, SPAWN_INTERVAL_TICKS, STEP } from '../../config/balance';
-import { MACHINES, cooldownTicks } from '../../config/machines';
+import { cooldownTicks } from '../../config/machines';
 import { SPAWN_MIX, SPAWN_MIX_TOTAL, type MaterialId } from '../../config/materials';
 import { neighbourIndex, sideDirection } from '../grid';
 import { nextFloat } from '../rng';
+import { errorChance, glassBreakChance } from '../sorting';
 import { exitDirection } from '../routing';
 import type { Cell, Direction, Item, WorldState } from '../types';
 
@@ -80,6 +81,7 @@ function spawn(world: WorldState): void {
       t: 0,
       dirIn: cell.dir,
       exitSide: false,
+      broken: false,
     });
   }
 }
@@ -121,6 +123,9 @@ function limitFor(
 
 function move(world: WorldState): void {
   const distance = world.beltSpeed * STEP;
+  // Бой стекла: на разогнанной ленте оно не выдерживает. Считаем шанс один раз
+  // на шаг, он одинаков для всех — зависит только от скорости.
+  const breakChance = glassBreakChance(world);
   const transfers: Transfer[] = [];
 
   for (let index = 0; index < world.cells.length; index++) {
@@ -134,6 +139,10 @@ function move(world: WorldState): void {
     for (let position = 0; position < cell.items.length; position++) {
       const item = cell.items[position];
       if (!item) continue;
+
+      if (breakChance > 0 && item.material === 'glass' && !item.broken) {
+        item.broken = nextFloat(world) < breakChance;
+      }
 
       item.t = Math.min(item.t + distance, limitFor(world, index, cell, position, item));
 
@@ -172,7 +181,9 @@ function move(world: WorldState): void {
     // Приёмник забирает предмет и запоминает его материал: из этого потом
     // считается чистота партии.
     if (transfer.consumed) {
-      to.collected[transfer.item.material]++;
+      // Бой считается отдельно: это уже не стекло, продать его как стекло нельзя.
+      if (transfer.item.broken) to.broken++;
+      else to.collected[transfer.item.material]++;
       world.delivered++;
       continue;
     }
@@ -184,7 +195,7 @@ function move(world: WorldState): void {
     // нему, и рендер показывает то же самое, что посчитает симуляция.
     if (to.kind === 'sorter' && to.machine) {
       const wantsForward = to.filter.includes(transfer.item.material);
-      const wrong = nextFloat(world) >= MACHINES[to.machine].accuracy;
+      const wrong = nextFloat(world) < errorChance(world, to, transfer.item);
       transfer.item.exitSide = wrong ? wantsForward : !wantsForward;
     } else if (to.kind === 'splitter') {
       // Делитель чередует стороны: поток расходится поровну.

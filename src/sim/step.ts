@@ -41,6 +41,7 @@ function applyCommand(world: WorldState, command: Command): void {
       // Приёмник забирает предметы мгновенно, держать их в себе ему незачем.
       cell.items.length = 0;
       cell.collected = emptyCollected();
+      cell.broken = 0;
       // Приёмник без назначенной фракции ничего не значит, поэтому по умолчанию
       // он принимает ПЭТ — базовый материал.
       cell.filter = ['pet'];
@@ -50,6 +51,7 @@ function applyCommand(world: WorldState, command: Command): void {
     case 'RESET_OUTLET':
       if (cell.kind !== 'outlet') return;
       cell.collected = emptyCollected();
+      cell.broken = 0;
       break;
 
     case 'PLACE_SPLITTER':
@@ -83,6 +85,7 @@ function applyCommand(world: WorldState, command: Command): void {
       cell.machine = null;
       cell.cooldown = 0;
       cell.collected = emptyCollected();
+      cell.broken = 0;
       // Предметы, стоявшие на снесённой клетке, исчезают вместе с ней.
       cell.items.length = 0;
       world.revision++;
