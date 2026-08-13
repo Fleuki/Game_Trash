@@ -1,4 +1,5 @@
 import { ITEM_GAP, SPAWN_INTERVAL_TICKS, STEP } from '../../config/balance';
+import { MACHINES, cooldownTicks } from '../../config/machines';
 import { SPAWN_MIX, SPAWN_MIX_TOTAL, type MaterialId } from '../../config/materials';
 import { neighbourIndex } from '../grid';
 import { nextFloat } from '../rng';
@@ -43,7 +44,13 @@ function spawn(world: WorldState): void {
     if (cell.kind !== 'inlet') continue;
     const last = cell.items[cell.items.length - 1];
     if (last && last.t < ITEM_GAP) continue;
-    cell.items.push({ id: world.nextItemId++, material: rollMaterial(world), t: 0, dirIn: cell.dir });
+    cell.items.push({
+      id: world.nextItemId++,
+      material: rollMaterial(world),
+      t: 0,
+      dirIn: cell.dir,
+      misrouted: false,
+    });
   }
 }
 
@@ -63,6 +70,10 @@ function limitFor(
 ): number {
   const ahead = cell.items[position - 1];
   if (ahead) return ahead.t - ITEM_GAP;
+
+  // Сортировщик обрабатывает предметы по одному: пока не отсчитал своё время,
+  // головной предмет стоит у выхода. Отсюда берётся пропускная способность.
+  if (cell.kind === 'sorter' && cell.cooldown > 0) return 1;
 
   const nextIndex = neighbourIndex(index, exitDirection(cell, item));
   const next = nextIndex === null ? undefined : world.cells[nextIndex];
@@ -84,6 +95,9 @@ function move(world: WorldState): void {
 
   for (let index = 0; index < world.cells.length; index++) {
     const cell = world.cells[index];
+    // Машина отсчитывает своё время даже пустая: иначе первый предмет после
+    // простоя проходил бы мгновенно.
+    if (cell.kind === 'sorter' && cell.cooldown > 0) cell.cooldown--;
     if (cell.items.length === 0) continue;
 
     for (let position = 0; position < cell.items.length; position++) {
@@ -94,6 +108,11 @@ function move(world: WorldState): void {
 
       // Уйти из клетки может только головной: остальных держит зазор.
       if (position !== 0 || item.t < 1) continue;
+
+      // Машина ещё не отсчитала своё время. Предел хода уже прижал предмет к
+      // выходу, но выпускать его рано: без этой проверки пропускная способность
+      // не работает вовсе, потому что упереться в предел и перейти — одно и то же.
+      if (cell.kind === 'sorter' && cell.cooldown > 0) continue;
 
       const exit = exitDirection(cell, item);
       const nextIndex = neighbourIndex(index, exit);
@@ -111,6 +130,11 @@ function move(world: WorldState): void {
     if (!from) continue;
     from.items.shift();
 
+    // Машина отпустила предмет — заводим её паузу до следующего.
+    if (from.kind === 'sorter' && from.machine) {
+      from.cooldown = cooldownTicks(from.machine);
+    }
+
     if (transfer.to === null) {
       world.delivered++;
       continue;
@@ -120,6 +144,15 @@ function move(world: WorldState): void {
     if (!to) continue;
     transfer.item.t -= 1;
     transfer.item.dirIn = transfer.exit;
+
+    // Решение принимается один раз, на въезде: дальше предмет едет по нему,
+    // и рендер показывает то же самое, что посчитает симуляция.
+    if (to.kind === 'sorter' && to.machine) {
+      transfer.item.misrouted = nextFloat(world) >= MACHINES[to.machine].accuracy;
+    } else {
+      transfer.item.misrouted = false;
+    }
+
     // В конец: предмет въезжает сзади и оказывается дальше всех от выхода.
     to.items.push(transfer.item);
   }

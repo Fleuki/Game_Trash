@@ -16,7 +16,7 @@ import { createBuildTool, type BuildAction, type BuildMode } from './ui/buildToo
 import { createDebugOverlay } from './ui/debugOverlay';
 import { attachPointerInput, type DragKind, type ScreenPoint } from './ui/pointer';
 import { createSpeedSlider } from './ui/speedSlider';
-import { createSplitterPanel } from './ui/splitterPanel';
+import { createCellPanel } from './ui/cellPanel';
 import { createToolbar } from './ui/toolbar';
 
 /**
@@ -65,8 +65,8 @@ async function main(): Promise<void> {
     commands.push({ type: 'SET_BELT_SPEED', value });
   });
 
-  const splitterPanel = createSplitterPanel(panelElement, (cell, filter) => {
-    commands.push({ type: 'SET_SPLITTER_FILTER', cx: cell.cx, cy: cell.cy, filter });
+  const cellPanel = createCellPanel(panelElement, (cell, filter) => {
+    commands.push({ type: 'SET_FILTER', cx: cell.cx, cy: cell.cy, filter });
   });
 
   function cellAt(point: ScreenPoint): CellCoord | null {
@@ -74,15 +74,15 @@ async function main(): Promise<void> {
     return cellAtScreen(camera, point.x, point.y, size.width, size.height);
   }
 
-  /** Тап по развилке в режиме «рука» открывает её настройку. */
-  function openSplitterAt(cell: CellCoord | null): void {
+  /** Тап по развилке или сортировщику в режиме «рука» открывает настройку. */
+  function openPanelAt(cell: CellCoord | null): void {
     if (mode !== 'hand' || !cell) return;
     const target = world.cells[cellIndex(cell.cx, cell.cy)];
-    if (!target || target.kind !== 'splitter') {
-      splitterPanel.close();
+    if (!target || (target.kind !== 'splitter' && target.kind !== 'sorter')) {
+      cellPanel.close();
       return;
     }
-    splitterPanel.open(cell, target.filter);
+    cellPanel.open(cell, target.filter, target.machine);
   }
 
   attachPointerInput(stage, {
@@ -116,7 +116,7 @@ async function main(): Promise<void> {
       // а значит, это клик по клетке, а не движение камеры.
       if (wasTap) {
         lastTap = cellAt(point);
-        openSplitterAt(lastTap);
+        openPanelAt(lastTap);
       }
 
       if (wasPanning) return;
@@ -152,13 +152,16 @@ async function main(): Promise<void> {
     if (event.code === 'Space') spaceHeld = true;
     if (event.code === 'Escape') {
       buildTool.cancel();
-      splitterPanel.close();
+      cellPanel.close();
     }
     const byKey: Record<string, BuildMode> = {
       KeyB: 'belt',
       KeyI: 'inlet',
       KeyO: 'outlet',
       KeyR: 'splitter',
+      Digit1: 'manual',
+      Digit2: 'magnet',
+      Digit3: 'optical',
       KeyE: 'erase',
       KeyH: 'hand',
     };
@@ -166,7 +169,7 @@ async function main(): Promise<void> {
     if (picked) {
       mode = picked;
       toolbar.setMode(mode);
-      if (mode !== 'hand') splitterPanel.close();
+      if (mode !== 'hand') cellPanel.close();
     }
   });
   document.addEventListener('keyup', (event: KeyboardEvent) => {

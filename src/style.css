@@ -36,8 +36,10 @@ body {
 #toolbar {
   position: fixed;
   left: 12px;
+  right: 12px;
   bottom: 12px;
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
@@ -126,4 +128,14 @@ body {
   border: 1px solid rgba(216, 212, 200, 0.2);
   border-radius: 4px;
   cursor: pointer;
+}
+
+#panel .panel-specs {
+  margin-bottom: 8px;
+  opacity: 0.75;
+}
+
+#panel .panel-rows label.is-disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }

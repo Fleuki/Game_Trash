@@ -1,5 +1,7 @@
 import type { Command } from '../commands/types';
 import { cellIndex, inBounds } from './grid';
+import { defaultMachineFilter } from '../config/machines';
+import { MATERIAL_IDS } from '../config/materials';
 import { defaultFilter } from './world';
 import { transport } from './systems/transport';
 import type { WorldState } from './types';
@@ -50,8 +52,18 @@ function applyCommand(world: WorldState, command: Command): void {
       world.revision++;
       break;
 
-    case 'SET_SPLITTER_FILTER':
-      if (cell.kind !== 'splitter') return;
+    case 'PLACE_SORTER':
+      cell.kind = 'sorter';
+      cell.dir = command.dir;
+      cell.machine = command.machine;
+      // По умолчанию машина пропускает прямо всё, что умеет выбирать.
+      cell.filter = defaultMachineFilter(command.machine, MATERIAL_IDS);
+      cell.cooldown = 0;
+      world.revision++;
+      break;
+
+    case 'SET_FILTER':
+      if (cell.kind !== 'splitter' && cell.kind !== 'sorter') return;
       cell.filter = [...command.filter];
       world.revision++;
       break;
@@ -59,6 +71,8 @@ function applyCommand(world: WorldState, command: Command): void {
     case 'REMOVE_CELL':
       if (cell.kind === 'empty') return;
       cell.kind = 'empty';
+      cell.machine = null;
+      cell.cooldown = 0;
       // Предметы, стоявшие на снесённой клетке, исчезают вместе с ней.
       cell.items.length = 0;
       world.revision++;

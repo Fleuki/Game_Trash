@@ -1,5 +1,6 @@
 import { Container, Graphics } from 'pixi.js';
 import { TILE_SIZE } from '../config/grid';
+import { MACHINES } from '../config/machines';
 import {
   COLOR_BELT,
   COLOR_BELT_ARROW,
@@ -102,10 +103,12 @@ export function createBeltLayer(): BeltLayer {
                   ? COLOR_OUTLET
                   : cell.kind === 'splitter'
                     ? COLOR_SPLITTER
-                    : COLOR_BELT;
+                    : cell.kind === 'sorter' && cell.machine
+                      ? MACHINES[cell.machine].color
+                      : COLOR_BELT;
             drawBelt(built, cx, cy, cell.dir, body, COLOR_BELT_ARROW, 1);
             // У развилки два выхода, и оба должны быть видны без открытия панели.
-            if (cell.kind === 'splitter') {
+            if (cell.kind === 'splitter' || cell.kind === 'sorter') {
               drawArrow(built, cx, cy, sideDirection(cell.dir), COLOR_BELT_ARROW, 0.75);
             }
           }
@@ -132,7 +135,9 @@ export function createBeltLayer(): BeltLayer {
                 ? COLOR_OUTLET
                 : ghostAction === 'splitter'
                   ? COLOR_SPLITTER
-                  : COLOR_CELL_HOVER;
+                  : ghostAction === 'manual' || ghostAction === 'magnet' || ghostAction === 'optical'
+                    ? MACHINES[ghostAction].color
+                    : COLOR_CELL_HOVER;
           drawBelt(ghostGraphics, cell.cx, cell.cy, cell.dir, body, COLOR_BELT_ARROW, 0.5);
         }
       }

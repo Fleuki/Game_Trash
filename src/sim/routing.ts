@@ -11,6 +11,11 @@ import type { Cell, Direction, Item } from './types';
  * рисоваться уже повёрнутым туда, куда он на самом деле поедет.
  */
 export function exitDirection(cell: Cell, item: Item): Direction {
-  if (cell.kind !== 'splitter') return cell.dir;
-  return cell.filter.includes(item.material) ? cell.dir : sideDirection(cell.dir);
+  if (cell.kind !== 'splitter' && cell.kind !== 'sorter') return cell.dir;
+
+  const matched = cell.filter.includes(item.material);
+  // Ошибка сортировщика переворачивает решение: предмет уезжает не туда.
+  // У развилки ошибок нет, она просто разводит поток.
+  const forward = cell.kind === 'sorter' ? matched !== item.misrouted : matched;
+  return forward ? cell.dir : sideDirection(cell.dir);
 }

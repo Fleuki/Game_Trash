@@ -1,23 +1,24 @@
+import { MACHINES, type MachineKind } from '../config/machines';
 import { MATERIALS, MATERIAL_IDS, type MaterialId } from '../config/materials';
 import type { CellCoord } from '../sim/types';
 
-export interface SplitterPanel {
-  /** Показать настройку развилки в этой клетке. */
-  open(cell: CellCoord, filter: readonly MaterialId[]): void;
+export interface CellPanel {
+  /** Показать настройку клетки: развилки или сортировщика. */
+  open(cell: CellCoord, filter: readonly MaterialId[], machine: MachineKind | null): void;
   close(): void;
   readonly isOpen: boolean;
 }
 
 /**
- * Настройка развилки: какие материалы едут прямо, какие уходят вбок.
+ * Настройка: какие материалы едут прямо, какие уходят вбок.
  *
  * Панель ничего не решает сама — отдаёт новый список наружу, а мир меняет
- * команда SET_SPLITTER_FILTER.
+ * команда SET_FILTER.
  */
-export function createSplitterPanel(
+export function createCellPanel(
   element: HTMLElement,
   onChange: (cell: CellCoord, filter: MaterialId[]) => void,
-): SplitterPanel {
+): CellPanel {
   let current: CellCoord | null = null;
   let selected = new Set<MaterialId>();
 
@@ -26,6 +27,9 @@ export function createSplitterPanel(
 
   const rows = document.createElement('div');
   rows.className = 'panel-rows';
+
+  const specs = document.createElement('div');
+  specs.className = 'panel-specs';
 
   const hint = document.createElement('div');
   hint.className = 'panel-hint';
@@ -36,7 +40,7 @@ export function createSplitterPanel(
   close.textContent = 'Закрыть';
   close.addEventListener('click', () => panel.close());
 
-  element.append(title, rows, hint, close);
+  element.append(title, specs, rows, hint, close);
   element.hidden = true;
 
   const checkboxes = new Map<MaterialId, HTMLInputElement>();
@@ -63,17 +67,27 @@ export function createSplitterPanel(
     checkboxes.set(material, input);
   }
 
-  const panel: SplitterPanel = {
+  const panel: CellPanel = {
     get isOpen(): boolean {
       return current !== null;
     },
 
-    open(cell: CellCoord, filter: readonly MaterialId[]): void {
+    open(cell: CellCoord, filter: readonly MaterialId[], machine: MachineKind | null): void {
       current = cell;
       selected = new Set(filter);
-      title.textContent = `Развилка ${cell.cx}, ${cell.cy}`;
+
+      const info = machine ? MACHINES[machine] : null;
+      title.textContent = `${info ? info.label : 'Развилка'} ${cell.cx}, ${cell.cy}`;
+      specs.textContent = info
+        ? `${info.throughput} ед/с, точность ${Math.round(info.accuracy * 100)}%`
+        : 'разводит поток без потерь';
+
       for (const [material, input] of checkboxes) {
         input.checked = selected.has(material);
+        // Магнит берёт только металл: остальное ему включить нельзя.
+        const canHandle = !info?.handles || info.handles.includes(material);
+        input.disabled = !canHandle;
+        input.parentElement?.classList.toggle('is-disabled', !canHandle);
       }
       element.hidden = false;
     },

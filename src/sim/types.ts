@@ -1,3 +1,4 @@
+import type { MachineKind } from '../config/machines';
 import type { MaterialId } from '../config/materials';
 
 /** Направление: куда смотрит объект. Индекс в таблицах из sim/grid.ts. */
@@ -15,7 +16,7 @@ export interface CellPlacement extends CellCoord {
 }
 
 /** Что стоит в клетке. Развилки и сортировщики добавятся в S5–S6. */
-export type CellKind = 'empty' | 'belt' | 'inlet' | 'outlet' | 'splitter';
+export type CellKind = 'empty' | 'belt' | 'inlet' | 'outlet' | 'splitter' | 'sorter';
 
 export interface Cell {
   kind: CellKind;
@@ -28,10 +29,16 @@ export interface Cell {
   items: Item[];
 
   /**
-   * Для развилки: материалы, которые едут прямо. Всё остальное уходит вбок.
-   * У прочих клеток не используется.
+   * Для развилки и сортировщика: материалы, которые едут прямо.
+   * Всё остальное уходит вбок. У прочих клеток не используется.
    */
   filter: MaterialId[];
+
+  /** Какой это сортировщик. null — клетка не сортировщик. */
+  machine: MachineKind | null;
+
+  /** Тиков до того, как сортировщик отпустит следующий предмет. */
+  cooldown: number;
 }
 
 /** Единица сырья, едущая по ленте. Живёт внутри клетки, в её массиве items. */
@@ -45,6 +52,12 @@ export interface Item {
    * он ехал буквой «Г», а не срезал угол по прямой.
    */
   dirIn: Direction;
+
+  /**
+   * Сортировщик ошибся на этом предмете. Решение принимается один раз, при
+   * въезде в машину: иначе предмет метался бы между выходами каждый кадр.
+   */
+  misrouted: boolean;
 }
 
 /**

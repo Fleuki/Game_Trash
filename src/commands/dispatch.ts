@@ -21,9 +21,10 @@ function isValid(command: Command): boolean {
     case 'PLACE_INLET':
     case 'PLACE_OUTLET':
     case 'PLACE_SPLITTER':
+    case 'PLACE_SORTER':
     case 'REMOVE_CELL':
       return inBounds(command.cx, command.cy);
-    case 'SET_SPLITTER_FILTER':
+    case 'SET_FILTER':
       return (
         inBounds(command.cx, command.cy) &&
         command.filter.every((material) => MATERIAL_IDS.includes(material))

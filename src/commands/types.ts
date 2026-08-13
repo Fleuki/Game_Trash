@@ -1,3 +1,4 @@
+import type { MachineKind } from '../config/machines';
 import type { MaterialId } from '../config/materials';
 import type { Direction } from '../sim/types';
 
@@ -36,9 +37,17 @@ export interface PlaceSplitterCommand {
   dir: Direction;
 }
 
+export interface PlaceSorterCommand {
+  type: 'PLACE_SORTER';
+  cx: number;
+  cy: number;
+  dir: Direction;
+  machine: MachineKind;
+}
+
 /** Новое правило маршрутизации: эти материалы едут прямо, остальные — вбок. */
-export interface SetSplitterFilterCommand {
-  type: 'SET_SPLITTER_FILTER';
+export interface SetFilterCommand {
+  type: 'SET_FILTER';
   cx: number;
   cy: number;
   filter: MaterialId[];
@@ -61,6 +70,7 @@ export type Command =
   | PlaceInletCommand
   | PlaceOutletCommand
   | PlaceSplitterCommand
-  | SetSplitterFilterCommand
+  | PlaceSorterCommand
+  | SetFilterCommand
   | RemoveCellCommand
   | SetBeltSpeedCommand;

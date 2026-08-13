@@ -8,7 +8,7 @@ import type { Cell, WorldState } from './types';
 export function createWorld(seed: number): WorldState {
   const cells: Cell[] = new Array<Cell>(GRID_WIDTH * GRID_HEIGHT);
   for (let i = 0; i < cells.length; i++) {
-    cells[i] = { kind: 'empty', dir: DIR_RIGHT, items: [], filter: [] };
+    cells[i] = { kind: 'empty', dir: DIR_RIGHT, items: [], filter: [], machine: null, cooldown: 0 };
   }
   return {
     tick: 0,

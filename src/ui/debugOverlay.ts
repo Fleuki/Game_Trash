@@ -41,6 +41,9 @@ const MODE_LABEL: Record<BuildMode, string> = {
   inlet: 'источник',
   outlet: 'сток',
   splitter: 'развилка',
+  manual: 'стол',
+  magnet: 'магнит',
+  optical: 'оптика',
   erase: 'снос',
   hand: 'рука',
 };
