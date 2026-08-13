@@ -1,11 +1,20 @@
 import { MAX_FRAME_DELTA, STEP, TICK_RATE } from './config/balance';
 import { createRenderer } from './render/app';
+import {
+  cellAtScreen,
+  createCamera,
+  fitToScreen,
+  panByScreen,
+  zoomAtScreen,
+  type CellCoord,
+} from './render/camera';
 import { step } from './sim/step';
 import { createWorld } from './sim/world';
 import { createDebugOverlay } from './ui/debugOverlay';
+import { attachPointerInput } from './ui/pointer';
 
 /**
- * Склейка: цикл, симуляция, рендер, оверлей.
+ * Склейка: цикл, симуляция, ввод, рендер, оверлей.
  *
  * Единственное место, где живёт реальное время. Симуляция про часы не знает и знать
  * не должна — она считает шаги.
@@ -18,6 +27,34 @@ async function main(): Promise<void> {
   const world = createWorld();
   const renderer = await createRenderer(stage);
   const overlay = createDebugOverlay(overlayElement);
+
+  const camera = createCamera();
+  const view = renderer.getViewSize();
+  fitToScreen(camera, view.width, view.height);
+
+  let hover: CellCoord | null = null;
+  let lastTap: CellCoord | null = null;
+
+  attachPointerInput(stage, {
+    onPan(deltaX, deltaY) {
+      panByScreen(camera, deltaX, deltaY);
+    },
+    onZoom(factor, screenX, screenY) {
+      const size = renderer.getViewSize();
+      zoomAtScreen(camera, factor, screenX, screenY, size.width, size.height);
+    },
+    onHover(screenX, screenY) {
+      const size = renderer.getViewSize();
+      hover = cellAtScreen(camera, screenX, screenY, size.width, size.height);
+    },
+    onHoverEnd() {
+      hover = null;
+    },
+    onTap(screenX, screenY) {
+      const size = renderer.getViewSize();
+      lastTap = cellAtScreen(camera, screenX, screenY, size.width, size.height);
+    },
+  });
 
   /** Нерастраченное время, накопленное к следующему шагу. */
   let accumulator = 0;
@@ -81,7 +118,7 @@ async function main(): Promise<void> {
       sampleSeconds = 0;
     }
 
-    renderer.render(world, accumulator / STEP);
+    renderer.render({ world, camera, hover, alpha: accumulator / STEP });
 
     overlay.update({
       tick: world.tick,
@@ -91,6 +128,9 @@ async function main(): Promise<void> {
       drift: world.tick - visibleSeconds * TICK_RATE,
       skipped: skippedTicks,
       backend: renderer.backend,
+      hover,
+      lastTap,
+      zoom: camera.zoom,
     });
   }
 

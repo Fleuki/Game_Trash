@@ -1,4 +1,6 @@
-/** Показания цикла за последний замер. */
+import type { CellCoord } from '../render/camera';
+
+/** Показания цикла и камеры за последний замер. */
 export interface DebugStats {
   /** Абсолютный счётчик шагов симуляции. */
   tick: number;
@@ -16,12 +18,21 @@ export interface DebugStats {
   /** Сколько шагов отброшено клампом: уход в фон, фризы вкладки. */
   skipped: number;
   backend: string;
+  /** Клетка под курсором. */
+  hover: CellCoord | null;
+  /** Последняя клетка, по которой кликнули или тапнули. */
+  lastTap: CellCoord | null;
+  zoom: number;
 }
 
 const UPDATE_INTERVAL_MS = 250;
 
 function pad(label: string, value: string): string {
   return label.padEnd(11) + value;
+}
+
+function formatCell(cell: CellCoord | null): string {
+  return cell ? `${cell.cx}, ${cell.cy}` : '—';
 }
 
 /**
@@ -45,6 +56,10 @@ export function createDebugOverlay(element: HTMLElement): { update(stats: DebugS
         pad('дрейф', `${stats.drift.toFixed(2)} тика`),
         pad('фон', `${Math.round(stats.skipped)} тиков отброшено`),
         pad('рендер', stats.backend),
+        '',
+        pad('курсор', formatCell(stats.hover)),
+        pad('клик', formatCell(stats.lastTap)),
+        pad('зум', `×${stats.zoom.toFixed(2)}`),
       ].join('\n');
     },
   };

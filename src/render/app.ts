@@ -1,24 +1,32 @@
-import { Application } from 'pixi.js';
+import { Application, Container } from 'pixi.js';
+import { COLOR_BACKGROUND } from '../config/view';
 import type { WorldState } from '../sim/types';
+import type { Camera, CellCoord } from './camera';
+import { createGridLayer } from './gridLayer';
 
-/**
- * Рендер читает мир и рисует его. В мир не пишет — правило 4 из PLAN §3.3.
- */
+/** Всё, что нужно нарисовать кадр. Рендер читает это и ничего из этого не меняет. */
+export interface Frame {
+  world: WorldState;
+  camera: Camera;
+  /** Клетка под курсором или null. */
+  hover: CellCoord | null;
+  /** Доля шага, накопленная сверх последнего тика (0..1) — для интерполяции. */
+  alpha: number;
+}
+
 export interface Renderer {
   /** Какой бэкенд достался: webgl или webgpu. Нужно только оверлею. */
   readonly backend: string;
-  /**
-   * Нарисовать кадр.
-   * @param alpha доля шага, накопленная сверх последнего тика (0..1) — для интерполяции.
-   */
-  render(world: WorldState, alpha: number): void;
+  /** Размер холста в пикселях CSS. Ввод считает координаты относительно него. */
+  getViewSize(): { width: number; height: number };
+  render(frame: Frame): void;
 }
 
 export async function createRenderer(container: HTMLElement): Promise<Renderer> {
   const app = new Application();
 
   await app.init({
-    background: 0x1b1b1a,
+    background: COLOR_BACKGROUND,
     resizeTo: window,
     antialias: true,
     autoDensity: true,
@@ -30,11 +38,31 @@ export async function createRenderer(container: HTMLElement): Promise<Renderer> 
   app.ticker.stop();
   container.appendChild(app.canvas);
 
+  // Всё игровое поле живёт внутри viewport: камера — это его позиция и масштаб,
+  // а не пересчёт координат каждого объекта.
+  const viewport = new Container();
+  const grid = createGridLayer();
+  viewport.addChild(grid.container);
+  app.stage.addChild(viewport);
+
   return {
     backend: app.renderer.name,
-    render(_world: WorldState, _alpha: number): void {
-      // Сцена пуста: в S0 рисовать нечего. Вызов настоящий — он чистит холст и
-      // прогоняет конвейер отрисовки, поэтому счётчик FPS показывает реальную работу.
+
+    getViewSize() {
+      return { width: app.renderer.screen.width, height: app.renderer.screen.height };
+    },
+
+    render(frame: Frame): void {
+      const { camera } = frame;
+      grid.syncZoom(camera.zoom);
+      grid.setHover(frame.hover);
+
+      viewport.scale.set(camera.zoom);
+      viewport.position.set(
+        app.renderer.screen.width / 2 - camera.x * camera.zoom,
+        app.renderer.screen.height / 2 - camera.y * camera.zoom,
+      );
+
       app.renderer.render(app.stage);
     },
   };
