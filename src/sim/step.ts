@@ -3,6 +3,7 @@ import { cellIndex, inBounds } from './grid';
 import { defaultMachineFilter } from '../config/machines';
 import { MATERIAL_IDS } from '../config/materials';
 import { emptyCollected } from './world';
+import { advancePhase, dayCycle } from './systems/dayCycle';
 import { transport } from './systems/transport';
 import type { WorldState } from './types';
 
@@ -14,6 +15,11 @@ function applyCommand(world: WorldState, command: Command): void {
   // команда может прийти из сейва или, в будущем, по сети.
   if (command.type === 'SET_BELT_SPEED') {
     world.beltSpeed = command.value;
+    return;
+  }
+
+  if (command.type === 'ADVANCE_PHASE') {
+    advancePhase(world);
     return;
   }
 
@@ -101,6 +107,8 @@ function applyCommand(world: WorldState, command: Command): void {
  */
 export function step(world: WorldState, commands: readonly Command[]): void {
   for (const command of commands) applyCommand(world, command);
-  transport(world);
+  dayCycle(world);
+  // Завод работает только днём: утро и вечер — паузы для решений.
+  if (world.phase === 'day') transport(world);
   world.tick++;
 }

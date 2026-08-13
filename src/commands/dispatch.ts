@@ -30,6 +30,8 @@ function isValid(command: Command): boolean {
         inBounds(command.cx, command.cy) &&
         command.filter.every((material) => MATERIAL_IDS.includes(material))
       );
+    case 'ADVANCE_PHASE':
+      return true;
     case 'SET_BELT_SPEED':
       return (
         Number.isFinite(command.value) &&

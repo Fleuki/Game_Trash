@@ -19,6 +19,8 @@ export interface Frame {
   ghostAction: BuildAction;
   /** Доля шага, накопленная сверх последнего тика (0..1) — для интерполяции. */
   alpha: number;
+  /** Сколько шагов симуляции делается за шаг реального времени: 0, 1, 2 или 4. */
+  timeScale: number;
 }
 
 export interface Renderer {
@@ -75,7 +77,7 @@ export async function createRenderer(container: HTMLElement): Promise<Renderer> 
       grid.syncZoom(camera.zoom);
       grid.setHover(frame.hover);
       belts.sync(frame.world, frame.ghost, frame.ghostAction);
-      const itemCount = items.sync(frame.world, frame.alpha);
+      const itemCount = items.sync(frame.world, frame.alpha * frame.timeScale);
       outlets.sync(frame.world);
 
       viewport.scale.set(camera.zoom);

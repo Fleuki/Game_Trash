@@ -22,6 +22,9 @@ export function createWorld(seed: number): WorldState {
   }
   return {
     tick: 0,
+    day: 1,
+    phase: 'morning',
+    dayTicks: 0,
     cells,
     nextItemId: 1,
     delivered: 0,

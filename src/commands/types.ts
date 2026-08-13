@@ -60,6 +60,11 @@ export interface ResetOutletCommand {
   cy: number;
 }
 
+/** Закончить утро и запустить день, или закончить вечер и перейти к завтрашнему утру. */
+export interface AdvancePhaseCommand {
+  type: 'ADVANCE_PHASE';
+}
+
 export interface SetBeltSpeedCommand {
   type: 'SET_BELT_SPEED';
   /** Клеток в секунду. Границы проверяются при постановке в очередь. */
@@ -81,4 +86,5 @@ export type Command =
   | SetFilterCommand
   | ResetOutletCommand
   | RemoveCellCommand
-  | SetBeltSpeedCommand;
+  | SetBeltSpeedCommand
+  | AdvancePhaseCommand;

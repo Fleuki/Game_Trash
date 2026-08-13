@@ -1,6 +1,12 @@
 import type { MachineKind } from '../config/machines';
 import type { MaterialId } from '../config/materials';
 
+/**
+ * Фаза дня. Утро и вечер — паузы: поток стоит, игрок думает и строит.
+ * Работает завод только днём — GDD §4.
+ */
+export type DayPhase = 'morning' | 'day' | 'evening';
+
 /** Направление: куда смотрит объект. Индекс в таблицах из sim/grid.ts. */
 export type Direction = 0 | 1 | 2 | 3;
 
@@ -87,6 +93,14 @@ export interface Item {
 export interface WorldState {
   /** Сколько шагов симуляции прожил мир. Растёт ровно на 1 за шаг. */
   tick: number;
+
+  /** Номер дня, начиная с первого. */
+  day: number;
+
+  phase: DayPhase;
+
+  /** Сколько тиков прошло с начала дневной фазы. */
+  dayTicks: number;
 
   /**
    * Клетки площадки, построчно: индекс = cy * GRID_WIDTH + cx.

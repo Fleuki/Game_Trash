@@ -11,10 +11,12 @@ import {
 import { cellIndex } from './sim/grid';
 import { purityOf } from './sim/purity';
 import { effectiveAccuracy } from './sim/sorting';
+import { hashWorld } from './sim/hash';
 import type { CellCoord } from './sim/types';
 import { step } from './sim/step';
 import { createWorld } from './sim/world';
 import { createBuildTool, type BuildAction, type BuildMode } from './ui/buildTool';
+import { createDayBar } from './ui/dayBar';
 import { createDebugOverlay } from './ui/debugOverlay';
 import { attachPointerInput, type DragKind, type ScreenPoint } from './ui/pointer';
 import { createSpeedSlider } from './ui/speedSlider';
@@ -33,7 +35,15 @@ async function main(): Promise<void> {
   const toolbarElement = document.querySelector<HTMLElement>('#toolbar');
   const panelElement = document.querySelector<HTMLElement>('#panel');
   const hintElement = document.querySelector<HTMLElement>('#hint');
-  if (!stage || !overlayElement || !toolbarElement || !panelElement || !hintElement) {
+  const dayBarElement = document.querySelector<HTMLElement>('#daybar');
+  if (
+    !stage ||
+    !overlayElement ||
+    !toolbarElement ||
+    !panelElement ||
+    !hintElement ||
+    !dayBarElement
+  ) {
     throw new Error('Разметка неполная');
   }
 
@@ -57,6 +67,16 @@ async function main(): Promise<void> {
   let panning = false;
   let spaceHeld = false;
   let beltCount = 0;
+  /** Сколько шагов симуляции делается за один шаг реального времени. 0 — пауза. */
+  let timeScale = 1;
+
+  const dayBar = createDayBar(
+    dayBarElement,
+    () => commands.push({ type: 'ADVANCE_PHASE' }),
+    (speed) => {
+      timeScale = speed;
+    },
+  );
 
   const toolbar = createToolbar(toolbarElement, hintElement, (picked) => {
     mode = picked;
@@ -244,10 +264,15 @@ async function main(): Promise<void> {
     const simStartMs = performance.now();
     let ticksThisFrame = 0;
     while (accumulator >= STEP) {
-      // drain() отдаёт накопленное только первому шагу кадра, остальные получают пусто.
-      step(world, commands.drain());
+      // Ускорение времени — это N шагов за кадр, а не другой шаг (PLAN §3.3,
+      // правило 2). На паузе шагов нет, но накопитель всё равно опустошается,
+      // иначе после снятия паузы прилетела бы пачка.
+      for (let i = 0; i < timeScale; i++) {
+        // drain() отдаёт накопленное только первому шагу, остальные получают пусто.
+        step(world, commands.drain());
+        ticksThisFrame++;
+      }
       accumulator -= STEP;
-      ticksThisFrame++;
     }
     if (ticksThisFrame > 0) {
       stepMs = (performance.now() - simStartMs) / ticksThisFrame;
@@ -270,6 +295,13 @@ async function main(): Promise<void> {
       beltCount = world.cells.reduce((total, cell) => total + (cell.kind === 'belt' ? 1 : 0), 0);
     }
 
+    dayBar.update({
+      day: world.day,
+      phase: world.phase,
+      dayTicks: world.dayTicks,
+      speed: timeScale,
+    });
+
     const itemCount = renderer.render({
       world,
       camera,
@@ -277,6 +309,7 @@ async function main(): Promise<void> {
       ghost: buildTool.preview,
       ghostAction: buildTool.action,
       alpha: accumulator / STEP,
+      timeScale,
     });
 
     // Панель приёмника показывает живой состав партии, а не снимок на момент открытия.
@@ -316,7 +349,14 @@ async function main(): Promise<void> {
   // Отладочный доступ к миру и камере: нужен для автопроверок и ручного ковыряния
   // в консоли. В сборку не попадает.
   if (import.meta.env.DEV) {
-    (window as unknown as { game: unknown }).game = { world, camera };
+    (window as unknown as { game: unknown }).game = {
+      world,
+      camera,
+      hash: () => hashWorld(world),
+      setTimeScale: (value: number) => {
+        timeScale = value;
+      },
+    };
   }
 }
 
