@@ -4,6 +4,8 @@ import { checkDeadlines, generateContractOffers } from './contracts';
 import { MATERIAL_IDS } from '../../config/materials';
 import { pileTotal } from '../pile';
 import { PLOT_UPKEEP } from '../../config/plots';
+import { CERTIFICATION_DAY } from '../../config/certification';
+import { evaluateCertification } from '../certification';
 import { emptyDayStats } from '../world';
 import type { WorldState } from '../types';
 
@@ -22,6 +24,17 @@ export function dayCycle(world: WorldState): void {
 
   world.dayTicks = DAY_LENGTH_TICKS;
   world.phase = 'evening';
+
+  // Комиссия приезжает в конце тридцатого дня и меряет всё сразу — GDD §12.
+  if (world.day >= CERTIFICATION_DAY && !world.certificate) {
+    const result = evaluateCertification(world);
+    world.certificate = {
+      level: result.level,
+      recycled: result.recycled,
+      purity: result.purity,
+      pile: result.pile,
+    };
+  }
 
   // Что не успели принять — не исчезает: партия куплена, и остаток ложится
   // в кучу. GDD §7: поток входит всегда, готов ты или нет.
@@ -67,10 +80,11 @@ export function advancePhase(world: WorldState): void {
     }
     // Сроки проверяются уже в новом дне: контракт «к 4-му дню» живёт весь
     // четвёртый день и срывается утром пятого.
-    checkDeadlines(world);
+    // В свободном режиме сроков нет: там уже нечего срывать — GDD §12.
+    if (!world.freeMode) checkDeadlines(world);
     // Недовезённое сегодня просто не приезжает: куча отходов появится в S13,
     // и вот тогда остаток начнёт где-то оседать.
     generateMarket(world);
-    generateContractOffers(world);
+    if (!world.freeMode) generateContractOffers(world);
   }
 }

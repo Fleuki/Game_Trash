@@ -70,6 +70,11 @@ export interface MoveCellCommand {
   toCy: number;
 }
 
+/** Перейти в свободный режим после сертификации. */
+export interface EnterFreeModeCommand {
+  type: 'ENTER_FREE_MODE';
+}
+
 /** Открыть следующий участок. */
 export interface BuyPlotCommand {
   type: 'BUY_PLOT';
@@ -144,6 +149,7 @@ export type Command =
   | DisposeWasteCommand
   | SetInletSourceCommand
   | BuyPlotCommand
+  | EnterFreeModeCommand
   | MoveCellCommand
   | SetFilterCommand
   | ShipOutletCommand

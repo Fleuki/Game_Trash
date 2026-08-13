@@ -38,6 +38,7 @@ function isValid(command: Command): boolean {
       );
     case 'ADVANCE_PHASE':
     case 'BUY_PLOT':
+    case 'ENTER_FREE_MODE':
       return true;
     case 'DISPOSE_WASTE':
       return Number.isFinite(command.units) && command.units > 0;

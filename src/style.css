@@ -579,3 +579,81 @@ body {
 #panel .panel-quick button[hidden] {
   display: none;
 }
+
+/* Комиссия перекрывает всё: это конец месяца, и решение принимается сейчас. */
+#certificate {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(12, 12, 11, 0.72);
+}
+
+#certificate[hidden] {
+  display: none;
+}
+
+.cert-card {
+  max-width: min(420px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+  padding: 16px 18px;
+  font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace;
+  color: #d8d4c8;
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(216, 212, 200, 0.28);
+  border-radius: 5px;
+}
+
+.cert-title {
+  font-weight: bold;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+}
+
+.cert-verdict {
+  margin: 6px 0 12px;
+  font-size: 20px;
+  font-weight: bold;
+  color: #d8b455;
+}
+
+.cert-verdict.is-failed {
+  color: #c1705c;
+}
+
+.cert-table {
+  margin: 0 0 14px;
+  font: 12px/1.6 ui-monospace, Menlo, Consolas, monospace;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.cert-free {
+  width: 100%;
+  min-height: 40px;
+  font: 13px/1 ui-monospace, Menlo, Consolas, monospace;
+  color: #1b1b1a;
+  background: #6f9a5c;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.cert-note {
+  margin-top: 8px;
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+#daybar .day-countdown {
+  padding: 0 8px;
+  color: #d8b455;
+}
+
+#daybar .day-countdown[hidden] {
+  display: none;
+}

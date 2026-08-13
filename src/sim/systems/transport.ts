@@ -101,6 +101,7 @@ function spawn(world: WorldState): void {
     if (!batch || batch.remaining <= 0) continue;
     batch.remaining--;
     world.today.arrived++;
+    world.totalArrived++;
     cell.items.push({
       id: world.nextItemId++,
       material: rollMaterial(world, batch.composition),

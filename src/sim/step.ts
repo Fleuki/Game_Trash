@@ -10,6 +10,7 @@ import { applyShipment, takeContract } from './systems/contracts';
 import { disposeWaste, isUnderPile } from './pile';
 import { DISPOSAL_COST_PER_UNIT } from '../config/waste';
 import { PLOT_COST, PLOT_COUNT } from '../config/plots';
+import { FREE_MODE_MONEY } from '../config/certification';
 import { transport } from './systems/transport';
 import type { WorldState } from './types';
 
@@ -36,6 +37,18 @@ function applyCommand(world: WorldState, command: Command): void {
 
   if (command.type === 'TAKE_CONTRACT') {
     takeContract(world, command.index);
+    return;
+  }
+
+  if (command.type === 'ENTER_FREE_MODE') {
+    if (!world.certificate || world.freeMode) return;
+    world.freeMode = true;
+    world.money += FREE_MODE_MONEY;
+    // Незакрытые заказы больше не висят: сроков в свободном режиме нет.
+    for (const contract of world.contracts) {
+      if (contract.status === 'active') contract.status = 'done';
+    }
+    world.contractOffers = [];
     return;
   }
 
@@ -216,6 +229,8 @@ function applyCommand(world: WorldState, command: Command): void {
 
       world.money += revenue;
       world.today.earned += revenue;
+      world.totalShipped += shipment.units;
+      world.totalPurityUnits += shipment.purity * shipment.units;
       world.today.shipments.push({
         material,
         units: shipment.units,

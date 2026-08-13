@@ -1,4 +1,5 @@
 import { DAY_LENGTH_TICKS, TIME_SPEEDS } from '../config/balance';
+import { CERTIFICATION_DAY } from '../config/certification';
 import type { DayPhase } from '../sim/types';
 
 const PHASE_LABEL: Record<DayPhase, string> = {
@@ -22,6 +23,8 @@ export interface DayBarState {
   /** Партия на сегодня выбрана. Без неё день начинать нечем. */
   hasBatch: boolean;
   money: number;
+  /** Свободный режим: комиссия уже приезжала, считать до неё больше нечего. */
+  freeMode: boolean;
 }
 
 export interface DayBar {
@@ -42,6 +45,11 @@ export function createDayBar(
 
   const money = document.createElement('div');
   money.className = 'day-money';
+
+  // Комиссия приезжает в конце тридцатого дня, и знать об этом надо заранее:
+  // чистоту и кучу за один день не исправить.
+  const countdown = document.createElement('div');
+  countdown.className = 'day-countdown';
 
   const track = document.createElement('div');
   track.className = 'day-track';
@@ -67,9 +75,10 @@ export function createDayBar(
   advance.className = 'day-advance';
   advance.addEventListener('click', onAdvance);
 
-  element.append(title, money, track, speeds, advance);
+  element.append(title, money, countdown, track, speeds, advance);
 
   let lastLabel = '';
+  let lastCountdown = '';
 
   return {
     update(state: DayBarState): void {
@@ -81,6 +90,17 @@ export function createDayBar(
         advance.hidden = state.phase === 'day';
       }
       advance.disabled = state.phase === 'morning' && !state.hasBatch;
+
+      const left = CERTIFICATION_DAY - state.day;
+      const text = state.freeMode
+        ? 'свободный режим'
+        : left > 0
+          ? `до комиссии ${left} дн.`
+          : 'комиссия сегодня';
+      if (text !== lastCountdown) {
+        lastCountdown = text;
+        countdown.textContent = text;
+      }
 
       money.textContent = `${state.money} ₽`;
       fill.style.width = `${Math.min(100, (state.dayTicks / DAY_LENGTH_TICKS) * 100)}%`;

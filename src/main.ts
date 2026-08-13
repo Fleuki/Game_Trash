@@ -23,6 +23,7 @@ import { createContractsPanel } from './ui/contractsPanel';
 import { createPilePanel } from './ui/pilePanel';
 import { createMarketPanel } from './ui/marketPanel';
 import { createReportPanel } from './ui/reportPanel';
+import { createCertificatePanel } from './ui/certificatePanel';
 import { createDebugOverlay } from './ui/debugOverlay';
 import { attachPointerInput, type DragKind, type ScreenPoint } from './ui/pointer';
 import { createSpeedSlider } from './ui/speedSlider';
@@ -47,6 +48,7 @@ async function main(): Promise<void> {
   const contractsElement = document.querySelector<HTMLElement>('#contracts');
   const pileElement = document.querySelector<HTMLElement>('#pile');
   const reopenElement = document.querySelector<HTMLElement>('#reopen');
+  const certificateElement = document.querySelector<HTMLElement>('#certificate');
   if (
     !stage ||
     !overlayElement ||
@@ -58,7 +60,8 @@ async function main(): Promise<void> {
     !reportElement ||
     !contractsElement ||
     !pileElement ||
-    !reopenElement
+    !reopenElement ||
+    !certificateElement
   ) {
     throw new Error('Разметка неполная');
   }
@@ -128,6 +131,10 @@ async function main(): Promise<void> {
   });
 
   const reportPanel = createReportPanel(reportElement);
+
+  const certificatePanel = createCertificatePanel(certificateElement, () => {
+    commands.push({ type: 'ENTER_FREE_MODE' });
+  });
 
   // Свёрнутую панель надо чем-то вернуть: маленькая кнопка вместо половины экрана.
   const reopenMarket = document.createElement('button');
@@ -418,6 +425,7 @@ async function main(): Promise<void> {
       world.contractOffers,
       world.contracts.filter((contract) => contract.status === 'active').length,
       { open: world.plots, money: world.money },
+      world.freeMode,
       world.phase === 'morning',
     );
     contractsPanel.update(world.contracts, world.day);
@@ -438,6 +446,8 @@ async function main(): Promise<void> {
       world.phase === 'evening',
     );
 
+    certificatePanel.update(world.certificate, world.freeMode);
+
     dayBar.update({
       day: world.day,
       hasBatch: world.batch !== null,
@@ -445,6 +455,7 @@ async function main(): Promise<void> {
       dayTicks: world.dayTicks,
       speed: timeScale,
       money: world.money,
+      freeMode: world.freeMode,
     });
 
     const itemCount = renderer.render({

@@ -1,4 +1,5 @@
 import type { DistrictId } from '../config/districts';
+import type { CertificationLevel } from '../config/certification';
 import type { CraftKind, ItemForm } from '../config/crafters';
 import type { MachineKind } from '../config/machines';
 import type { MaterialId } from '../config/materials';
@@ -217,6 +218,21 @@ export interface WorldState {
 
   /** Сколько участков открыто. Начинаем с одного — GDD §11. */
   plots: number;
+
+  /** Всего приехало за партию, единиц. Знаменатель доли переработки. */
+  totalArrived: number;
+
+  /** Всего отгружено, единиц. */
+  totalShipped: number;
+
+  /** Сумма «чистота × единицы» по всем отгрузкам: делённая на объём даёт среднее. */
+  totalPurityUnits: number;
+
+  /** Итог сертификации. null — комиссия ещё не приезжала. */
+  certificate: { level: CertificationLevel; recycled: number; purity: number; pile: number } | null;
+
+  /** Свободный режим: без контрактов и сроков — GDD §12. */
+  freeMode: boolean;
 
   /**
    * Куча отходов: всё, что не переработано. По составу, потому что в S14

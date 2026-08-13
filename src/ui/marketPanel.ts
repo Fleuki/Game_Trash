@@ -15,6 +15,7 @@ export interface MarketPanel {
     offers: readonly Contract[],
     activeCount: number,
     plots: { open: number; money: number },
+    freeMode: boolean,
     isMorning: boolean,
   ): void;
 }
@@ -73,11 +74,11 @@ export function createMarketPanel(
       signature = '';
     },
 
-    update(market, batch, offers, activeCount, plots, isMorning): void {
+    update(market, batch, offers, activeCount, plots, freeMode, isMorning): void {
       element.hidden = !isMorning || closed;
       if (!isMorning || closed) return;
 
-      const next = `${market.map((o) => `${o.district}:${o.volume}`).join('|')}#${batch?.district ?? '-'}#${offers.map((c) => c.id).join(',')}#${activeCount}#${plots.open}#${plots.money >= PLOT_COST}`;
+      const next = `${market.map((o) => `${o.district}:${o.volume}`).join('|')}#${batch?.district ?? '-'}#${offers.map((c) => c.id).join(',')}#${activeCount}#${plots.open}#${plots.money >= PLOT_COST}#${freeMode}`;
       if (next === signature) return;
       signature = next;
 
@@ -133,14 +134,18 @@ export function createMarketPanel(
         element.appendChild(card);
       });
 
+      // В свободном режиме заказов нет вовсе, и пустая доска с «Активных 0 из 3»
+      // только сбивала бы с толку — GDD §12.
       const board = document.createElement('div');
       board.className = 'panel-title board-title';
       board.textContent = 'Доска заказов';
+      board.hidden = freeMode;
       element.appendChild(board);
 
       const full = activeCount >= MAX_ACTIVE_CONTRACTS;
       const boardHint = document.createElement('div');
       boardHint.className = 'panel-hint';
+      boardHint.hidden = freeMode;
       boardHint.textContent = full
         ? `Взято ${activeCount} из ${MAX_ACTIVE_CONTRACTS} — больше не потянуть`
         : `Активных ${activeCount} из ${MAX_ACTIVE_CONTRACTS}`;
