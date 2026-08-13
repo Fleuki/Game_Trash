@@ -5,6 +5,9 @@ import { PLOT_COST, PLOT_COUNT, PLOT_UPKEEP } from '../config/plots';
 import type { Batch, Contract, Offer } from '../sim/types';
 
 export interface MarketPanel {
+  /** Свёрнута ли панель. */
+  readonly closed: boolean;
+  setClosed(closed: boolean): void;
   /** Показать рынок и доску заказов. Днём и вечером они закрыты. */
   update(
     market: readonly Offer[],
@@ -57,11 +60,22 @@ export function createMarketPanel(
   onBuyPlot: () => void,
 ): MarketPanel {
   let signature = '';
+  let closed = false;
 
-  return {
+  const panel: MarketPanel = {
+    get closed(): boolean {
+      return closed;
+    },
+
+    setClosed(next: boolean): void {
+      if (closed === next) return;
+      closed = next;
+      signature = '';
+    },
+
     update(market, batch, offers, activeCount, plots, isMorning): void {
-      element.hidden = !isMorning;
-      if (!isMorning) return;
+      element.hidden = !isMorning || closed;
+      if (!isMorning || closed) return;
 
       const next = `${market.map((o) => `${o.district}:${o.volume}`).join('|')}#${batch?.district ?? '-'}#${offers.map((c) => c.id).join(',')}#${activeCount}#${plots.open}#${plots.money >= PLOT_COST}`;
       if (next === signature) return;
@@ -69,10 +83,24 @@ export function createMarketPanel(
 
       element.textContent = '';
 
+      // Заголовок с крестиком: на телефоне панель закрывает пол-экрана, и
+      // закрыть её должно быть можно, не выбирая ничего.
+      const head = document.createElement('div');
+      head.className = 'panel-head';
+
       const title = document.createElement('div');
       title.className = 'panel-title';
       title.textContent = 'Рынок партий';
-      element.appendChild(title);
+
+      const close = document.createElement('button');
+      close.type = 'button';
+      close.className = 'panel-close';
+      close.textContent = '×';
+      close.title = 'Свернуть';
+      close.addEventListener('click', () => panel.setClosed(true));
+
+      head.append(title, close);
+      element.appendChild(head);
 
       const hint = document.createElement('div');
       hint.className = 'panel-hint';
@@ -166,4 +194,6 @@ export function createMarketPanel(
       }
     },
   };
+
+  return panel;
 }

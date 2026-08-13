@@ -46,6 +46,7 @@ async function main(): Promise<void> {
   const reportElement = document.querySelector<HTMLElement>('#report');
   const contractsElement = document.querySelector<HTMLElement>('#contracts');
   const pileElement = document.querySelector<HTMLElement>('#pile');
+  const reopenElement = document.querySelector<HTMLElement>('#reopen');
   if (
     !stage ||
     !overlayElement ||
@@ -56,7 +57,8 @@ async function main(): Promise<void> {
     !marketElement ||
     !reportElement ||
     !contractsElement ||
-    !pileElement
+    !pileElement ||
+    !reopenElement
   ) {
     throw new Error('Разметка неполная');
   }
@@ -83,6 +85,15 @@ async function main(): Promise<void> {
   let beltCount = 0;
   /** Сколько шагов симуляции делается за один шаг реального времени. 0 — пауза. */
   let timeScale = 1;
+
+  // Верхняя полоса на узком экране переносится в несколько рядов, поэтому
+  // боковые колонки отступают от её настоящей высоты, а не от выдуманной.
+  const trackTopBar = (): void => {
+    const height = dayBarElement.getBoundingClientRect().height;
+    document.documentElement.style.setProperty('--topbar-height', `${Math.round(height)}px`);
+  };
+  new ResizeObserver(trackTopBar).observe(dayBarElement);
+  trackTopBar();
 
   const dayBar = createDayBar(
     dayBarElement,
@@ -115,6 +126,24 @@ async function main(): Promise<void> {
   });
 
   const reportPanel = createReportPanel(reportElement);
+
+  // Свёрнутую панель надо чем-то вернуть: маленькая кнопка вместо половины экрана.
+  const reopenMarket = document.createElement('button');
+  reopenMarket.type = 'button';
+  reopenMarket.textContent = 'Рынок и заказы';
+  reopenMarket.addEventListener('click', () => marketPanel.setClosed(false));
+
+  const reopenReport = document.createElement('button');
+  reopenReport.type = 'button';
+  reopenReport.textContent = 'Отчёт за день';
+  reopenReport.addEventListener('click', () => reportPanel.setClosed(false));
+
+  // Отдельная ссылка: frame — поднятая функция, и сужение типа в неё не проходит.
+  const reopenBar: HTMLElement = reopenElement;
+  reopenBar.append(reopenMarket, reopenReport);
+
+  /** Утро и вечер открывают свою панель заново: свернули вчера — не значит навсегда. */
+  let shownPhase = world.phase;
 
   const cellPanel = createCellPanel(
     panelElement,
@@ -347,6 +376,16 @@ async function main(): Promise<void> {
       countedRevision = world.revision;
       beltCount = world.cells.reduce((total, cell) => total + (cell.kind === 'belt' ? 1 : 0), 0);
     }
+
+    if (world.phase !== shownPhase) {
+      shownPhase = world.phase;
+      marketPanel.setClosed(false);
+      reportPanel.setClosed(false);
+    }
+
+    reopenMarket.hidden = !(world.phase === 'morning' && marketPanel.closed);
+    reopenReport.hidden = !(world.phase === 'evening' && reportPanel.closed);
+    reopenBar.hidden = reopenMarket.hidden && reopenReport.hidden;
 
     marketPanel.update(
       world.market,

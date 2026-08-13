@@ -3,6 +3,8 @@ import { MATERIALS } from '../config/materials';
 import type { Batch, Contract, DayStats } from '../sim/types';
 
 export interface ReportPanel {
+  readonly closed: boolean;
+  setClosed(closed: boolean): void;
   update(
     day: number,
     stats: DayStats,
@@ -27,11 +29,33 @@ function row(label: string, value: string): string {
  */
 export function createReportPanel(element: HTMLElement): ReportPanel {
   let signature = '';
+  let closed = false;
 
-  return {
+  const body = document.createElement('pre');
+  body.className = 'report-body';
+
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'panel-close';
+  close.textContent = '×';
+  close.title = 'Свернуть';
+
+  element.append(close, body);
+
+  const panel: ReportPanel = {
+    get closed(): boolean {
+      return closed;
+    },
+
+    setClosed(next: boolean): void {
+      if (closed === next) return;
+      closed = next;
+      signature = '';
+    },
+
     update(day, stats, batch, money, reputation, contracts, pile, isEvening): void {
-      element.hidden = !isEvening;
-      if (!isEvening) return;
+      element.hidden = !isEvening || closed;
+      if (!isEvening || closed) return;
 
       const next = `${day}|${stats.earned}|${stats.spent}|${stats.shipments.length}|${money}|${stats.contractsDone}|${stats.contractsFailed}|${pile}`;
       if (next === signature) return;
@@ -112,7 +136,10 @@ export function createReportPanel(element: HTMLElement): ReportPanel {
         row('Репутация', `${reputation >= 0 ? '+' : ''}${reputation}`),
       );
 
-      element.textContent = lines.join('\n');
+      body.textContent = lines.join('\n');
     },
   };
+
+  close.addEventListener('click', () => panel.setClosed(true));
+  return panel;
 }

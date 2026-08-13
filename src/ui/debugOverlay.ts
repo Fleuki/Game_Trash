@@ -68,8 +68,9 @@ function formatCell(cell: CellCoord | null): string {
  */
 export function createDebugOverlay(element: HTMLElement): { update(stats: DebugStats): void } {
   let lastUpdate = -Infinity;
-  // На телефоне развёрнутая панель закрывает пол-экрана, поэтому её можно свернуть.
-  let collapsed = false;
+  // На телефоне развёрнутая панель закрывает пол-экрана, поэтому её можно
+  // свернуть — и на узком экране она свёрнута с самого начала.
+  let collapsed = window.innerWidth < 700;
 
   // Сама панель прозрачна для нажатий: иначе она перехватывала бы тапы по полю
   // под собой, и в левом верхнем углу нельзя было бы ничего построить.
@@ -77,7 +78,8 @@ export function createDebugOverlay(element: HTMLElement): { update(stats: DebugS
   const toggle = document.createElement('button');
   toggle.type = 'button';
   toggle.className = 'toggle';
-  toggle.textContent = '–';
+  toggle.textContent = collapsed ? '+' : '–';
+  element.classList.toggle('is-collapsed', collapsed);
 
   const lines = document.createElement('pre');
   lines.className = 'lines';
