@@ -1,4 +1,5 @@
 import { DAY_LENGTH_TICKS } from '../../config/balance';
+import { generateMarket } from './market';
 import type { WorldState } from '../types';
 
 /**
@@ -21,6 +22,8 @@ export function dayCycle(world: WorldState): void {
 /** Перейти к следующей фазе по воле игрока. День сам не начинается и не повторяется. */
 export function advancePhase(world: WorldState): void {
   if (world.phase === 'morning') {
+    // Без выбранной партии день начинать нечем.
+    if (!world.batch) return;
     world.phase = 'day';
     world.dayTicks = 0;
     return;
@@ -29,5 +32,8 @@ export function advancePhase(world: WorldState): void {
     world.phase = 'morning';
     world.day++;
     world.dayTicks = 0;
+    // Недовезённое сегодня просто не приезжает: куча отходов появится в S13,
+    // и вот тогда остаток начнёт где-то оседать.
+    generateMarket(world);
   }
 }

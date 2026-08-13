@@ -61,6 +61,12 @@ export interface ResetOutletCommand {
 }
 
 /** Закончить утро и запустить день, или закончить вечер и перейти к завтрашнему утру. */
+/** Взять партию с утреннего рынка. */
+export interface SelectOfferCommand {
+  type: 'SELECT_OFFER';
+  index: number;
+}
+
 export interface AdvancePhaseCommand {
   type: 'ADVANCE_PHASE';
 }
@@ -87,4 +93,5 @@ export type Command =
   | ResetOutletCommand
   | RemoveCellCommand
   | SetBeltSpeedCommand
-  | AdvancePhaseCommand;
+  | AdvancePhaseCommand
+  | SelectOfferCommand;

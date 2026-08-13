@@ -2,6 +2,7 @@ import { BELT_SPEED_DEFAULT } from '../config/balance';
 import { GRID_HEIGHT, GRID_WIDTH } from '../config/grid';
 import { DIR_RIGHT } from './grid';
 import type { MaterialId } from '../config/materials';
+import { generateMarket } from './systems/market';
 import type { Cell, WorldState } from './types';
 
 /** Новый мир: пустая площадка. */
@@ -20,11 +21,13 @@ export function createWorld(seed: number): WorldState {
       broken: 0,
     };
   }
-  return {
+  const world: WorldState = {
     tick: 0,
     day: 1,
     phase: 'morning',
     dayTicks: 0,
+    market: [],
+    batch: null,
     cells,
     nextItemId: 1,
     delivered: 0,
@@ -34,6 +37,10 @@ export function createWorld(seed: number): WorldState {
     rngState: seed | 0,
     revision: 0,
   };
+
+  // Первое утро уже с рынком: пустая утренняя фаза не значила бы ничего.
+  generateMarket(world);
+  return world;
 }
 
 /** Пустой счётчик принятого: нули по всем материалам. */

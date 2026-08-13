@@ -1,3 +1,4 @@
+import type { DistrictId } from '../config/districts';
 import type { MachineKind } from '../config/machines';
 import type { MaterialId } from '../config/materials';
 
@@ -6,6 +7,25 @@ import type { MaterialId } from '../config/materials';
  * Работает завод только днём — GDD §4.
  */
 export type DayPhase = 'morning' | 'day' | 'evening';
+
+/** Предложение на утреннем рынке. Состав виден до покупки — GDD §8. */
+export interface Offer {
+  district: DistrictId;
+  /** Сколько единиц мусора приедет. */
+  volume: number;
+  /** Доли материалов, в сумме единица. */
+  composition: Record<MaterialId, number>;
+}
+
+/** Купленная партия: то, что источники выдают сегодня. */
+export interface Batch {
+  district: DistrictId;
+  composition: Record<MaterialId, number>;
+  /** Сколько единиц ещё не приехало. */
+  remaining: number;
+  /** Сколько было изначально. */
+  volume: number;
+}
 
 /** Направление: куда смотрит объект. Индекс в таблицах из sim/grid.ts. */
 export type Direction = 0 | 1 | 2 | 3;
@@ -101,6 +121,12 @@ export interface WorldState {
 
   /** Сколько тиков прошло с начала дневной фазы. */
   dayTicks: number;
+
+  /** Предложения этого утра. */
+  market: Offer[];
+
+  /** Что везём сегодня. null — партия ещё не выбрана, и день начинать рано. */
+  batch: Batch | null;
 
   /**
    * Клетки площадки, построчно: индекс = cy * GRID_WIDTH + cx.

@@ -17,6 +17,7 @@ import { step } from './sim/step';
 import { createWorld } from './sim/world';
 import { createBuildTool, type BuildAction, type BuildMode } from './ui/buildTool';
 import { createDayBar } from './ui/dayBar';
+import { createMarketPanel } from './ui/marketPanel';
 import { createDebugOverlay } from './ui/debugOverlay';
 import { attachPointerInput, type DragKind, type ScreenPoint } from './ui/pointer';
 import { createSpeedSlider } from './ui/speedSlider';
@@ -36,13 +37,15 @@ async function main(): Promise<void> {
   const panelElement = document.querySelector<HTMLElement>('#panel');
   const hintElement = document.querySelector<HTMLElement>('#hint');
   const dayBarElement = document.querySelector<HTMLElement>('#daybar');
+  const marketElement = document.querySelector<HTMLElement>('#market');
   if (
     !stage ||
     !overlayElement ||
     !toolbarElement ||
     !panelElement ||
     !hintElement ||
-    !dayBarElement
+    !dayBarElement ||
+    !marketElement
   ) {
     throw new Error('Разметка неполная');
   }
@@ -86,6 +89,10 @@ async function main(): Promise<void> {
 
   createSpeedSlider(toolbarElement, world.beltSpeed, (value) => {
     commands.push({ type: 'SET_BELT_SPEED', value });
+  });
+
+  const marketPanel = createMarketPanel(marketElement, (index) => {
+    commands.push({ type: 'SELECT_OFFER', index });
   });
 
   const cellPanel = createCellPanel(
@@ -295,8 +302,11 @@ async function main(): Promise<void> {
       beltCount = world.cells.reduce((total, cell) => total + (cell.kind === 'belt' ? 1 : 0), 0);
     }
 
+    marketPanel.update(world.market, world.batch, world.phase === 'morning');
+
     dayBar.update({
       day: world.day,
+      hasBatch: world.batch !== null,
       phase: world.phase,
       dayTicks: world.dayTicks,
       speed: timeScale,

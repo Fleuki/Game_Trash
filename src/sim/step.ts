@@ -4,6 +4,7 @@ import { defaultMachineFilter } from '../config/machines';
 import { MATERIAL_IDS } from '../config/materials';
 import { emptyCollected } from './world';
 import { advancePhase, dayCycle } from './systems/dayCycle';
+import { selectOffer } from './systems/market';
 import { transport } from './systems/transport';
 import type { WorldState } from './types';
 
@@ -20,6 +21,11 @@ function applyCommand(world: WorldState, command: Command): void {
 
   if (command.type === 'ADVANCE_PHASE') {
     advancePhase(world);
+    return;
+  }
+
+  if (command.type === 'SELECT_OFFER') {
+    selectOffer(world, command.index);
     return;
   }
 

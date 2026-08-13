@@ -19,6 +19,8 @@ export interface DayBarState {
   phase: DayPhase;
   dayTicks: number;
   speed: number;
+  /** Партия на сегодня выбрана. Без неё день начинать нечем. */
+  hasBatch: boolean;
 }
 
 export interface DayBar {
@@ -74,6 +76,7 @@ export function createDayBar(
         advance.textContent = ADVANCE_LABEL[state.phase];
         advance.hidden = state.phase === 'day';
       }
+      advance.disabled = state.phase === 'morning' && !state.hasBatch;
 
       fill.style.width = `${Math.min(100, (state.dayTicks / DAY_LENGTH_TICKS) * 100)}%`;
 

@@ -1,6 +1,6 @@
 import { ITEM_GAP, SPAWN_INTERVAL_TICKS, STEP } from '../../config/balance';
 import { cooldownTicks } from '../../config/machines';
-import { SPAWN_MIX, SPAWN_MIX_TOTAL, type MaterialId } from '../../config/materials';
+import { MATERIAL_IDS, type MaterialId } from '../../config/materials';
 import { neighbourIndex, sideDirection } from '../grid';
 import { nextFloat } from '../rng';
 import { errorChance, glassBreakChance } from '../sorting';
@@ -19,14 +19,14 @@ interface Transfer {
   exit: Direction;
 }
 
-/** Материал очередного предмета по весам состава. */
-function rollMaterial(world: WorldState): MaterialId {
-  let roll = nextFloat(world) * SPAWN_MIX_TOTAL;
-  for (const entry of SPAWN_MIX) {
-    roll -= entry.weight;
-    if (roll < 0) return entry.material;
+/** Материал очередного предмета по составу купленной партии. */
+function rollMaterial(world: WorldState, composition: Record<MaterialId, number>): MaterialId {
+  let roll = nextFloat(world);
+  for (const id of MATERIAL_IDS) {
+    roll -= composition[id];
+    if (roll < 0) return id;
   }
-  return SPAWN_MIX[SPAWN_MIX.length - 1]?.material ?? 'pet';
+  return 'pet';
 }
 
 /** Есть ли куда положить предмет в соседе по этому направлению. */
@@ -67,17 +67,23 @@ function accepts(cell: Cell | undefined): cell is Cell {
  * Забился вход — источник встаёт вместе с линией, а не сыплет предметы друг в друга.
  */
 function spawn(world: WorldState): void {
+  const batch = world.batch;
+  // Партия кончилась — источники молчат: возить больше нечего.
+  if (!batch || batch.remaining <= 0) return;
+
   world.spawnTimer++;
   if (world.spawnTimer < SPAWN_INTERVAL_TICKS) return;
   world.spawnTimer = 0;
 
   for (const cell of world.cells) {
     if (cell.kind !== 'inlet') continue;
+    if (batch.remaining <= 0) break;
     const last = cell.items[cell.items.length - 1];
     if (last && last.t < ITEM_GAP) continue;
+    batch.remaining--;
     cell.items.push({
       id: world.nextItemId++,
-      material: rollMaterial(world),
+      material: rollMaterial(world, batch.composition),
       t: 0,
       dirIn: cell.dir,
       exitSide: false,
