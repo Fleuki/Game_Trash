@@ -1,5 +1,6 @@
 import { DAY_LENGTH_TICKS } from '../../config/balance';
 import { generateMarket } from './market';
+import { checkDeadlines, generateContractOffers } from './contracts';
 import { emptyDayStats } from '../world';
 import type { WorldState } from '../types';
 
@@ -40,8 +41,12 @@ export function advancePhase(world: WorldState): void {
     world.day++;
     world.dayTicks = 0;
     world.today = emptyDayStats();
+    // Сроки проверяются уже в новом дне: контракт «к 4-му дню» живёт весь
+    // четвёртый день и срывается утром пятого.
+    checkDeadlines(world);
     // Недовезённое сегодня просто не приезжает: куча отходов появится в S13,
     // и вот тогда остаток начнёт где-то оседать.
     generateMarket(world);
+    generateContractOffers(world);
   }
 }

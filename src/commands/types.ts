@@ -67,6 +67,12 @@ export interface SelectOfferCommand {
   index: number;
 }
 
+/** Взять контракт с утренней доски. */
+export interface TakeContractCommand {
+  type: 'TAKE_CONTRACT';
+  index: number;
+}
+
 export interface AdvancePhaseCommand {
   type: 'ADVANCE_PHASE';
 }
@@ -94,4 +100,5 @@ export type Command =
   | RemoveCellCommand
   | SetBeltSpeedCommand
   | AdvancePhaseCommand
-  | SelectOfferCommand;
+  | SelectOfferCommand
+  | TakeContractCommand;

@@ -3,6 +3,7 @@ import { GRID_HEIGHT, GRID_WIDTH } from '../config/grid';
 import { DIR_RIGHT } from './grid';
 import type { MaterialId } from '../config/materials';
 import { STARTING_MONEY } from '../config/economy';
+import { generateContractOffers } from './systems/contracts';
 import { generateMarket } from './systems/market';
 import type { Cell, DayStats, WorldState } from './types';
 
@@ -31,6 +32,10 @@ export function createWorld(seed: number): WorldState {
     batch: null,
     money: STARTING_MONEY,
     today: emptyDayStats(),
+    contracts: [],
+    contractOffers: [],
+    nextContractId: 1,
+    reputation: 0,
     cells,
     nextItemId: 1,
     delivered: 0,
@@ -43,6 +48,7 @@ export function createWorld(seed: number): WorldState {
 
   // Первое утро уже с рынком: пустая утренняя фаза не значила бы ничего.
   generateMarket(world);
+  generateContractOffers(world);
   return world;
 }
 
@@ -53,5 +59,16 @@ export function emptyCollected(): Record<MaterialId, number> {
 
 /** Пустые итоги дня. */
 export function emptyDayStats(): DayStats {
-  return { arrived: 0, processed: 0, shipments: [], earned: 0, spent: 0, refunded: 0 };
+  return {
+    arrived: 0,
+    processed: 0,
+    shipments: [],
+    earned: 0,
+    spent: 0,
+    refunded: 0,
+    rewards: 0,
+    penalties: 0,
+    contractsDone: 0,
+    contractsFailed: 0,
+  };
 }

@@ -1,10 +1,23 @@
 import { DISTRICTS } from '../config/districts';
 import { MATERIALS, MATERIAL_IDS } from '../config/materials';
-import type { Batch, Offer } from '../sim/types';
+import { MAX_ACTIVE_CONTRACTS } from '../config/contracts';
+import type { Batch, Contract, Offer } from '../sim/types';
 
 export interface MarketPanel {
-  /** Показать рынок этого утра. Днём и вечером рынок закрыт. */
-  update(market: readonly Offer[], batch: Batch | null, isMorning: boolean): void;
+  /** Показать рынок и доску заказов. Днём и вечером они закрыты. */
+  update(
+    market: readonly Offer[],
+    batch: Batch | null,
+    offers: readonly Contract[],
+    activeCount: number,
+    isMorning: boolean,
+  ): void;
+}
+
+function contractText(contract: Contract): string {
+  return contract.items
+    .map((item) => `${item.units} ед ${MATERIALS[item.material].label.toLowerCase()} ≥${Math.round(item.minPurity * 100)}%`)
+    .join(' + ');
 }
 
 /** Полоска состава: сразу видно, чего в партии много, а чего нет. */
@@ -38,15 +51,16 @@ function compositionText(offer: Offer): string {
 export function createMarketPanel(
   element: HTMLElement,
   onPick: (index: number) => void,
+  onTakeContract: (index: number) => void,
 ): MarketPanel {
   let signature = '';
 
   return {
-    update(market, batch, isMorning): void {
+    update(market, batch, offers, activeCount, isMorning): void {
       element.hidden = !isMorning;
       if (!isMorning) return;
 
-      const next = `${market.map((o) => `${o.district}:${o.volume}`).join('|')}#${batch?.district ?? '-'}`;
+      const next = `${market.map((o) => `${o.district}:${o.volume}`).join('|')}#${batch?.district ?? '-'}#${offers.map((c) => c.id).join(',')}#${activeCount}`;
       if (next === signature) return;
       signature = next;
 
@@ -85,6 +99,42 @@ export function createMarketPanel(
 
         card.append(head, compositionBar(offer), composition, note);
         card.addEventListener('click', () => onPick(index));
+        element.appendChild(card);
+      });
+
+      const board = document.createElement('div');
+      board.className = 'panel-title board-title';
+      board.textContent = 'Доска заказов';
+      element.appendChild(board);
+
+      const full = activeCount >= MAX_ACTIVE_CONTRACTS;
+      const boardHint = document.createElement('div');
+      boardHint.className = 'panel-hint';
+      boardHint.textContent = full
+        ? `Взято ${activeCount} из ${MAX_ACTIVE_CONTRACTS} — больше не потянуть`
+        : `Активных ${activeCount} из ${MAX_ACTIVE_CONTRACTS}`;
+      element.appendChild(boardHint);
+
+      offers.forEach((contract, index) => {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'offer contract-offer';
+        card.disabled = full;
+
+        const head = document.createElement('div');
+        head.className = 'offer-head';
+        head.textContent = `${contract.reward} ₽ · до дня ${contract.deadlineDay}`;
+
+        const body = document.createElement('div');
+        body.className = 'offer-composition';
+        body.textContent = contractText(contract);
+
+        const note = document.createElement('div');
+        note.className = 'offer-note';
+        note.textContent = `Срыв: штраф ${contract.penalty} ₽`;
+
+        card.append(head, body, note);
+        card.addEventListener('click', () => onTakeContract(index));
         element.appendChild(card);
       });
     },

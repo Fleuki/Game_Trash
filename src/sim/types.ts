@@ -27,12 +27,34 @@ export interface Batch {
   volume: number;
 }
 
+/** Одна позиция заказа: столько-то такой-то фракции не грязнее заданного. */
+export interface ContractItem {
+  material: MaterialId;
+  units: number;
+  minPurity: number;
+  /** Сколько уже сдано. */
+  delivered: number;
+}
+
+export interface Contract {
+  id: number;
+  items: ContractItem[];
+  /** Последний день, когда заказ ещё можно сдать. */
+  deadlineDay: number;
+  reward: number;
+  penalty: number;
+  status: 'active' | 'done' | 'failed';
+}
+
 /** Одна отгрузка: что, сколько, какой чистоты и за сколько ушло. */
 export interface Shipped {
   material: MaterialId;
   units: number;
   purity: number;
+  /** Выручка с рынка. Награда за контракт приходит отдельно, при закрытии. */
   revenue: number;
+  /** Сколько единиц ушло в счёт заказов. */
+  toContracts: number;
 }
 
 /** Итоги дня. Обнуляются с началом каждого дня, читаются вечером в отчёте. */
@@ -45,6 +67,12 @@ export interface DayStats {
   earned: number;
   spent: number;
   refunded: number;
+  /** Награды за сданные сегодня контракты, входят в earned. */
+  rewards: number;
+  /** Штрафы за сорванные. */
+  penalties: number;
+  contractsDone: number;
+  contractsFailed: number;
 }
 
 /** Направление: куда смотрит объект. Индекс в таблицах из sim/grid.ts. */
@@ -153,6 +181,21 @@ export interface WorldState {
 
   /** Итоги текущего дня. */
   today: DayStats;
+
+  /** Взятые контракты: и активные, и закрытые за партию. */
+  contracts: Contract[];
+
+  /** Что предлагают сегодня утром на доске. */
+  contractOffers: Contract[];
+
+  /** Откуда берутся номера контрактов. */
+  nextContractId: number;
+
+  /**
+   * Репутация. Растёт за сданные заказы, падает за сорванные, и двигает
+   * награду в новых предложениях: сорвал — предлагают хуже.
+   */
+  reputation: number;
 
   /**
    * Клетки площадки, построчно: индекс = cy * GRID_WIDTH + cx.

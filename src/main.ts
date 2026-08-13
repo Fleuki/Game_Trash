@@ -18,6 +18,7 @@ import { applyCommands, step } from './sim/step';
 import { createWorld } from './sim/world';
 import { createBuildTool, type BuildAction, type BuildMode } from './ui/buildTool';
 import { createDayBar } from './ui/dayBar';
+import { createContractsPanel } from './ui/contractsPanel';
 import { createMarketPanel } from './ui/marketPanel';
 import { createReportPanel } from './ui/reportPanel';
 import { createDebugOverlay } from './ui/debugOverlay';
@@ -41,6 +42,7 @@ async function main(): Promise<void> {
   const dayBarElement = document.querySelector<HTMLElement>('#daybar');
   const marketElement = document.querySelector<HTMLElement>('#market');
   const reportElement = document.querySelector<HTMLElement>('#report');
+  const contractsElement = document.querySelector<HTMLElement>('#contracts');
   if (
     !stage ||
     !overlayElement ||
@@ -49,7 +51,8 @@ async function main(): Promise<void> {
     !hintElement ||
     !dayBarElement ||
     !marketElement ||
-    !reportElement
+    !reportElement ||
+    !contractsElement
   ) {
     throw new Error('Разметка неполная');
   }
@@ -95,9 +98,13 @@ async function main(): Promise<void> {
     commands.push({ type: 'SET_BELT_SPEED', value });
   });
 
-  const marketPanel = createMarketPanel(marketElement, (index) => {
-    commands.push({ type: 'SELECT_OFFER', index });
-  });
+  const marketPanel = createMarketPanel(
+    marketElement,
+    (index) => commands.push({ type: 'SELECT_OFFER', index }),
+    (index) => commands.push({ type: 'TAKE_CONTRACT', index }),
+  );
+
+  const contractsPanel = createContractsPanel(contractsElement);
 
   const reportPanel = createReportPanel(reportElement);
 
@@ -317,8 +324,23 @@ async function main(): Promise<void> {
       beltCount = world.cells.reduce((total, cell) => total + (cell.kind === 'belt' ? 1 : 0), 0);
     }
 
-    marketPanel.update(world.market, world.batch, world.phase === 'morning');
-    reportPanel.update(world.day, world.today, world.batch, world.money, world.phase === 'evening');
+    marketPanel.update(
+      world.market,
+      world.batch,
+      world.contractOffers,
+      world.contracts.filter((contract) => contract.status === 'active').length,
+      world.phase === 'morning',
+    );
+    contractsPanel.update(world.contracts, world.day);
+    reportPanel.update(
+      world.day,
+      world.today,
+      world.batch,
+      world.money,
+      world.reputation,
+      world.contracts,
+      world.phase === 'evening',
+    );
 
     dayBar.update({
       day: world.day,

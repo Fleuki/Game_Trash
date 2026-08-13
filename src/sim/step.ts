@@ -6,6 +6,7 @@ import { MATERIAL_IDS } from '../config/materials';
 import { emptyCollected } from './world';
 import { advancePhase, dayCycle } from './systems/dayCycle';
 import { selectOffer } from './systems/market';
+import { applyShipment, takeContract } from './systems/contracts';
 import { transport } from './systems/transport';
 import type { WorldState } from './types';
 
@@ -27,6 +28,11 @@ function applyCommand(world: WorldState, command: Command): void {
 
   if (command.type === 'SELECT_OFFER') {
     selectOffer(world, command.index);
+    return;
+  }
+
+  if (command.type === 'TAKE_CONTRACT') {
+    takeContract(world, command.index);
     return;
   }
 
@@ -96,13 +102,21 @@ function applyCommand(world: WorldState, command: Command): void {
       const shipment = valueOf(cell);
       if (!shipment) return;
 
-      world.money += shipment.revenue;
-      world.today.earned += shipment.revenue;
+      // Сначала контракты: за отданное по заказу платят наградой при закрытии,
+      // а остаток уходит на рынок по обычной цене.
+      const material = shipment.material as typeof cell.filter[number];
+      const toContracts = applyShipment(world, material, shipment.units, shipment.purity);
+      const onMarket = shipment.units - toContracts;
+      const revenue = shipment.units === 0 ? 0 : Math.round((shipment.revenue * onMarket) / shipment.units);
+
+      world.money += revenue;
+      world.today.earned += revenue;
       world.today.shipments.push({
-        material: shipment.material as typeof cell.filter[number],
+        material,
         units: shipment.units,
         purity: shipment.purity,
-        revenue: shipment.revenue,
+        revenue,
+        toContracts,
       });
       cell.collected = emptyCollected();
       cell.broken = 0;

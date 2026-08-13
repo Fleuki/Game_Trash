@@ -1,9 +1,17 @@
 import { DISTRICTS } from '../config/districts';
 import { MATERIALS } from '../config/materials';
-import type { Batch, DayStats } from '../sim/types';
+import type { Batch, Contract, DayStats } from '../sim/types';
 
 export interface ReportPanel {
-  update(day: number, stats: DayStats, batch: Batch | null, money: number, isEvening: boolean): void;
+  update(
+    day: number,
+    stats: DayStats,
+    batch: Batch | null,
+    money: number,
+    reputation: number,
+    contracts: readonly Contract[],
+    isEvening: boolean,
+  ): void;
 }
 
 function row(label: string, value: string): string {
@@ -13,24 +21,24 @@ function row(label: string, value: string): string {
 /**
  * Вечерний отчёт по GDD §4.
  *
- * Куча отходов и контракты появятся в S13 и S12 — их строк здесь пока нет,
- * и придумывать их заранее незачем: пустая строка в отчёте ничего не значит.
+ * Строки про кучу отходов здесь пока нет: она появится в S13, а пустая строка
+ * в отчёте ничего не значит.
  */
 export function createReportPanel(element: HTMLElement): ReportPanel {
   let signature = '';
 
   return {
-    update(day, stats, batch, money, isEvening): void {
+    update(day, stats, batch, money, reputation, contracts, isEvening): void {
       element.hidden = !isEvening;
       if (!isEvening) return;
 
-      const next = `${day}|${stats.earned}|${stats.spent}|${stats.shipments.length}|${money}`;
+      const next = `${day}|${stats.earned}|${stats.spent}|${stats.shipments.length}|${money}|${stats.contractsDone}|${stats.contractsFailed}`;
       if (next === signature) return;
       signature = next;
 
       const left = batch ? batch.remaining : 0;
       const onBelts = stats.arrived - stats.processed;
-      const profit = stats.earned - stats.spent + stats.refunded;
+      const profit = stats.earned - stats.spent + stats.refunded - stats.penalties;
 
       const lines: string[] = [
         `Итоги дня ${day}`,
@@ -48,11 +56,27 @@ export function createReportPanel(element: HTMLElement): ReportPanel {
       } else {
         lines.push('Отгружено:');
         for (const shipment of stats.shipments) {
+          const toContracts = shipment.toContracts > 0 ? ` · по заказам ${shipment.toContracts} ед` : '';
           lines.push(
             row(
               `  ${MATERIALS[shipment.material].label}`,
-              `${shipment.units} ед · чистота ${(shipment.purity * 100).toFixed(1)}% · ${shipment.revenue} ₽`,
+              `${shipment.units} ед · чистота ${(shipment.purity * 100).toFixed(1)}% · ${shipment.revenue} ₽${toContracts}`,
             ),
+          );
+        }
+      }
+
+      const active = contracts.filter((contract) => contract.status === 'active');
+      if (active.length > 0) {
+        lines.push('', 'Заказы:');
+        for (const contract of active) {
+          const parts = contract.items.map(
+            (item) =>
+              `${MATERIALS[item.material].label} ${item.delivered}/${item.units}`,
+          );
+          const left = contract.deadlineDay - day;
+          lines.push(
+            row(`  ${parts.join(' + ')}`, left <= 0 ? 'срок вышел' : `осталось ${left} дн.`),
           );
         }
       }
@@ -60,10 +84,17 @@ export function createReportPanel(element: HTMLElement): ReportPanel {
       lines.push(
         '',
         row('Выручка', `${stats.earned} ₽`),
+        ...(stats.contractsDone > 0
+          ? [row('  сдано заказов', `${stats.contractsDone} на ${stats.rewards} ₽`)]
+          : []),
+        ...(stats.contractsFailed > 0
+          ? [row('  сорвано заказов', `${stats.contractsFailed}, штраф ${stats.penalties} ₽`)]
+          : []),
         row('Потрачено на стройку', `${stats.spent} ₽`),
         row('Возвращено за снос', `${stats.refunded} ₽`),
         row('Итог дня', `${profit >= 0 ? '+' : ''}${profit} ₽`),
         row('Баланс', `${money} ₽`),
+        row('Репутация', `${reputation >= 0 ? '+' : ''}${reputation}`),
       );
 
       element.textContent = lines.join('\n');

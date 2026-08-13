@@ -32,6 +32,7 @@ function isValid(command: Command): boolean {
       );
     case 'ADVANCE_PHASE':
       return true;
+    case 'TAKE_CONTRACT':
     case 'SELECT_OFFER':
       return Number.isInteger(command.index) && command.index >= 0;
     case 'SET_BELT_SPEED':

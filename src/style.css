@@ -79,10 +79,20 @@ body {
   display: none;
 }
 
-#debug-overlay {
+#sidebar {
   position: fixed;
   top: 64px;
   left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  max-width: min(320px, calc(100vw - 24px));
+  pointer-events: none;
+}
+
+#debug-overlay {
+  position: relative;
   margin: 0;
   padding: 10px 14px;
   font: 12px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -186,10 +196,27 @@ body {
   accent-color: #6f9a5c;
 }
 
-#panel {
+/* Панели правой колонки складываются друг под другом, а не друг на друга:
+   утром рынок и настройка клетки открыты одновременно. */
+#rightbar {
   position: fixed;
   right: 12px;
-  top: 12px;
+  top: 64px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+  overflow-y: auto;
+  pointer-events: none;
+}
+
+#rightbar > * {
+  pointer-events: auto;
+  flex: 0 0 auto;
+}
+
+#panel {
   min-width: 200px;
   padding: 12px 14px;
   font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace;
@@ -268,12 +295,7 @@ body {
 }
 
 #market {
-  position: fixed;
-  right: 12px;
-  top: 64px;
   width: min(300px, calc(100vw - 24px));
-  max-height: calc(100vh - 220px);
-  overflow-y: auto;
   padding: 12px;
   font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace;
   color: #d8d4c8;
@@ -338,12 +360,7 @@ body {
 }
 
 #report {
-  position: fixed;
-  right: 12px;
-  top: 64px;
   max-width: min(460px, calc(100vw - 24px));
-  max-height: calc(100vh - 220px);
-  overflow-y: auto;
   margin: 0;
   padding: 12px 14px;
   font: 12px/1.6 ui-monospace, Menlo, Consolas, monospace;
@@ -356,4 +373,49 @@ body {
 
 #report[hidden] {
   display: none;
+}
+
+#contracts {
+  padding: 8px 10px;
+  font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace;
+  color: #d8d4c8;
+  background: rgba(0, 0, 0, 0.62);
+  border: 1px solid rgba(216, 212, 200, 0.15);
+  border-radius: 4px;
+}
+
+#contracts[hidden] {
+  display: none;
+}
+
+#contracts .contract + .contract {
+  margin-top: 8px;
+}
+
+#contracts .contract.is-urgent {
+  color: #e0a89a;
+}
+
+#contracts .contract-track {
+  height: 5px;
+  margin-top: 4px;
+  background: rgba(216, 212, 200, 0.15);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+#contracts .contract-fill {
+  height: 100%;
+  background: #6f9a5c;
+}
+
+#market .board-title {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(216, 212, 200, 0.2);
+}
+
+#market .contract-offer:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
